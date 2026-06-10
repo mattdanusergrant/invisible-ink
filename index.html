@@ -183,6 +183,7 @@
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
     <button class="tbtn" id="bExport" title="Export & backup">↓</button>
+    <button class="tbtn" id="bCloud" title="Account & sync">☁</button>
     <button class="tbtn" id="bCodex">📖 Codex</button>
   </div>
 </header>
@@ -259,6 +260,24 @@
   </div>
 </div>
 
+<!-- account / cloud sync -->
+<div class="ov" id="ovCloud">
+  <div class="card">
+    <h2>Sync</h2>
+    <div id="cloudOut">
+      <p>Write anywhere — your manuscript follows you. We email a sign-in link; no password to remember. Until then everything stays on this device.</p>
+      <input class="csearch" id="cloudEmail" type="email" placeholder="you@example.com" style="width:100%;margin:0 0 10px;display:block" />
+      <button class="tbtn primary" id="cloudSend" style="width:100%;padding:11px">Email me a sign-in link</button>
+    </div>
+    <div id="cloudIn" style="display:none">
+      <p id="cloudWho" style="color:var(--ink)"></p>
+      <p id="cloudStat"></p>
+      <button class="tbtn" id="cloudOutBtn" style="width:100%;padding:11px">Sign out (keep writing locally)</button>
+    </div>
+    <button class="tbtn" id="cloudClose" style="width:100%;margin-top:10px">Close</button>
+  </div>
+</div>
+
 <input type="file" id="restoreFile" accept="application/json" style="display:none" />
 <div id="toast"></div>
 
@@ -309,7 +328,7 @@ function load(){
   return fresh();
 }
 let saveT;
-function save(){ clearTimeout(saveT); saveT = setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); }
+function save(){ clearTimeout(saveT); saveT = setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); schedulePush(); }
 
 /* ---- daily rollover + survival + streak ---------------------------- */
 function rollover(){
@@ -620,8 +639,89 @@ $("restoreFile").onchange = e=>{
 let toastT;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
 
+/* ---- cloud sync (Supabase, optional) --------------------------------
+   Accounts via magic-link email; one row per user, guarded by row-level
+   security. Local-first: localStorage stays the live save; the cloud gets a
+   debounced push after edits and a pull on load/sign-in/tab-focus, with
+   timestamp conflict prompts. Leave SB_URL empty to run fully local —
+   the ☁ button hides itself and nothing is loaded. */
+const SB_URL = "https://zatrhqutklugogfejulz.supabase.co";   // Supabase project URL
+const SB_KEY = "sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";   // publishable key — safe to embed; RLS guards the data
+const SYNC_KEY = "writeordie.syncedAt";
+let sb = null, sbUser = null, pushT = null, dirty = false;
+function cloudStat(msg, good){ const el=$("cloudStat"); el.textContent=msg; el.style.color = good ? "var(--good)" : "var(--muted)"; }
+async function cloudInit(){
+  if(!SB_URL || !SB_KEY){ $("bCloud").style.display = "none"; return; }
+  try{
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    sb = createClient(SB_URL, SB_KEY);
+    sb.auth.onAuthStateChange((_e, session)=>{
+      sbUser = (session && session.user) || null;
+      renderCloud();
+      if(sbUser) pull();
+    });
+    window.addEventListener("focus", ()=>{ if(sbUser) pull(); });
+  }catch{ $("bCloud").style.display = "none"; }   // CDN unreachable — run fully local
+}
+function schedulePush(){ if(!sbUser) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(push, 3000); }
+async function push(){
+  if(!sbUser) return;
+  try{
+    cloudStat("syncing…");
+    const { data } = await sb.from("manuscripts").select("updated_at").eq("user_id", sbUser.id).maybeSingle();
+    const last = localStorage.getItem(SYNC_KEY) || "";
+    if(data && last && data.updated_at > last &&
+       !confirm("A newer copy exists from another device. Overwrite it with this one?")){ pull(); return; }
+    const now = new Date().toISOString();
+    const { error } = await sb.from("manuscripts").upsert({ user_id: sbUser.id, state: S, updated_at: now });
+    if(error) throw error;
+    localStorage.setItem(SYNC_KEY, now); dirty = false;
+    cloudStat("✓ synced", true);
+  }catch{
+    cloudStat("offline — will retry");
+    clearTimeout(pushT); pushT = setTimeout(push, 15000);
+  }
+}
+async function pull(){
+  if(!sbUser) return;
+  try{
+    const { data } = await sb.from("manuscripts").select("state,updated_at").eq("user_id", sbUser.id).maybeSingle();
+    if(!data){ push(); return; }                      // first sign-in on a fresh account: seed the cloud
+    const last = localStorage.getItem(SYNC_KEY) || "";
+    if(data.updated_at <= last){ cloudStat("✓ synced", true); return; }
+    if(dirty && !confirm("A newer copy exists from another device. Load it? (Cancel keeps this device's version.)")){ push(); return; }
+    applyState(data.state);
+    localStorage.setItem(SYNC_KEY, data.updated_at); dirty = false;
+    cloudStat("✓ synced", true);
+  }catch{ cloudStat("offline"); }
+}
+function applyState(s){
+  S = normalize(s);
+  mtitle.value = S.title; draft.value = cur().body; chTitle.value = cur().title;
+  S.lastCount = totalWords();
+  rollover(); renderChapters(); renderCodex(); renderStats(); renderDeath(); save();
+  clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
+}
+function renderCloud(){
+  $("cloudOut").style.display = sbUser ? "none" : "";
+  $("cloudIn").style.display = sbUser ? "" : "none";
+  if(sbUser) $("cloudWho").textContent = sbUser.email;
+}
+$("bCloud").onclick = ()=>{ renderCloud(); $("ovCloud").classList.add("on"); };
+$("cloudClose").onclick = ()=>$("ovCloud").classList.remove("on");
+$("cloudSend").onclick = async ()=>{
+  const email = $("cloudEmail").value.trim();
+  if(!email){ toast("Enter your email first."); return; }
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] } });
+  toast(error ? "Couldn't send the link — try again in a minute." : "Check your email for the sign-in link.");
+};
+$("cloudOutBtn").onclick = async ()=>{
+  await sb.auth.signOut(); localStorage.removeItem(SYNC_KEY);
+  toast("Signed out — your writing stays on this device.");
+};
+
 /* ---- boot ----------------------------------------------------------- */
-rollover(); buildTabs(); renderCodex(); renderChapters(); renderStats(); renderDeath(); save();
+rollover(); buildTabs(); renderCodex(); renderChapters(); renderStats(); renderDeath(); save(); cloudInit();
 // catch a midnight crossing (or days of neglect) while the tab was left open
 window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
 </script>
