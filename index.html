@@ -167,7 +167,7 @@
 <body>
 <header>
   <div class="brand">Write or Die<small>write — or the story dies</small></div>
-  <input id="mtitle" placeholder="Untitled manuscript" />
+  <input id="mtitle" placeholder="Name this WIP" />
   <div class="chips">
     <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
     <div class="chip goal" id="cGoal" title="Click to set your daily word goal">
@@ -192,6 +192,9 @@
 
 <main>
   <nav class="chapters" id="chapters">
+    <div class="chhead"><span>Projects</span>
+      <button class="tbtn" id="prAdd" title="Start a new WIP" style="padding:3px 10px">＋</button></div>
+    <div class="chlist" id="prlist" style="flex:none;max-height:34%"></div>
     <div class="chhead"><span>Chapters</span>
       <button class="tbtn" id="chAdd" title="Add chapter" style="padding:3px 10px">＋</button></div>
     <div class="chlist" id="chlist"></div>
@@ -301,30 +304,43 @@ const wc = t => (t.trim().match(/\S+/g) || []).length;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
 /* ---- state ---------------------------------------------------------- */
-const fresh = () => { const id = uid(); return {
-  title:"", goal:500,
+const freshProject = name => { const cid = uid(); return {
+  id: uid(), name: name || "Untitled WIP",
+  chapters:[{id:cid, title:"Chapter 1", body:""}], currentId: cid, codex:[]
+};};
+const fresh = () => { const p = freshProject(); return {
+  goal:500,
   day:today(), todayWords:0, lastCount:0,   // words written today = additive deltas
   streak:0, lastGoalDay:"",                 // streak bookkeeping
   lives:MAX_LIVES, started:false, dead:false,  // survival layer
-  codex:[], sprints:[],
-  chapters:[{id, title:"Chapter 1", body:""}], currentId:id
+  sprints:[],
+  projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
-// fold any loaded/restored object into the current shape (migrates v1 single-body)
+// fold any loaded/restored object into the current shape
+// (migrates v1 single-body and v2 single-manuscript saves into one project)
 function normalize(s){
   const st = Object.assign(fresh(), s);
-  if(!Array.isArray(s.chapters) || !s.chapters.length){   // v1 (single body) or empty — migrate
-    const ch = {id:uid(), title:"Chapter 1", body:(s.body||"")};
-    st.chapters = [ch]; st.currentId = ch.id;
+  if(!Array.isArray(s.projects) || !s.projects.length){
+    const p = freshProject(s.title);
+    if(Array.isArray(s.chapters) && s.chapters.length){ p.chapters = s.chapters; p.currentId = s.currentId; }
+    else p.chapters[0].body = s.body || "";           // v1 (single body)
+    if(Array.isArray(s.codex)) p.codex = s.codex;
+    st.projects = [p]; st.projectId = p.id;
   }
-  if(!st.currentId || !st.chapters.find(c=>c.id===st.currentId)) st.currentId = st.chapters[0].id;
+  st.projects.forEach(p=>{
+    if(!Array.isArray(p.chapters) || !p.chapters.length) p.chapters = [{id:uid(), title:"Chapter 1", body:""}];
+    if(!p.currentId || !p.chapters.find(c=>c.id===p.currentId)) p.currentId = p.chapters[0].id;
+    if(!Array.isArray(p.codex)) p.codex = [];
+  });
+  if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
   if(typeof st.lives !== "number") st.lives = MAX_LIVES;
-  st.started = !!st.started || st.chapters.some(c=>wc(c.body)>0);   // stakes begin once you've written
-  delete st.body;
+  st.started = !!st.started || st.projects.some(p=>p.chapters.some(c=>wc(c.body)>0));   // stakes begin once you've written
+  delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
   return st;
 }
 let S = load();
 function load(){
-  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s&&s.title!==undefined) return normalize(s); }catch{}
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && (Array.isArray(s.projects) || s.title!==undefined)) return normalize(s); }catch{}
   return fresh();
 }
 let saveT;
@@ -363,11 +379,13 @@ function liveStreak(){
   return d<=1 ? S.streak : 0;
 }
 
-/* ---- the manuscript (chapters) ------------------------------------- */
+/* ---- the manuscript (projects → chapters) --------------------------- */
 const draft = $("draft"), mtitle = $("mtitle"), chTitle = $("chTitle");
-const cur = () => S.chapters.find(c=>c.id===S.currentId) || S.chapters[0];
-const totalWords = () => S.chapters.reduce((n,c)=>n+wc(c.body),0);
-mtitle.value = S.title; draft.value = cur().body; chTitle.value = cur().title;
+const P = () => S.projects.find(p=>p.id===S.projectId) || S.projects[0];
+const cur = () => P().chapters.find(c=>c.id===P().currentId) || P().chapters[0];
+const totalWords = () => P().chapters.reduce((n,c)=>n+wc(c.body),0);
+const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0);
+mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
 S.lastCount = totalWords();
 
 function onWrite(){
@@ -384,16 +402,57 @@ function onWrite(){
   renderStats(); renderChapters(); save();
 }
 draft.addEventListener("input", onWrite);
-mtitle.addEventListener("input", ()=>{ S.title = mtitle.value; save(); });
+mtitle.addEventListener("input", ()=>{ P().name = mtitle.value; renderProjects(); save(); });
 chTitle.addEventListener("input", ()=>{ cur().title = chTitle.value; renderChapters(); save(); });
+
+/* ---- projects (WIPs) ------------------------------------------------ */
+function renderProjects(){
+  $("prlist").innerHTML = S.projects.map(p=>`<div class="chitem${p.id===S.projectId?' on':''}" data-id="${p.id}">
+    <div class="chmain"><span class="chname">${esc(p.name)||"Untitled WIP"}</span><span class="chwc">${projWords(p)}</span></div>
+    <div class="chctl"><button data-act="del" title="Delete WIP">✕</button></div></div>`).join("");
+  $("prlist").querySelectorAll(".chitem").forEach(el=>{
+    const id = el.dataset.id;
+    el.querySelector(".chmain").onclick = ()=>switchProject(id);
+    el.querySelector(".chctl button").onclick = ev=>{ ev.stopPropagation(); delProject(id); };
+  });
+}
+function loadProject(){
+  mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
+  S.lastCount = totalWords();   // switching WIPs isn't writing — resync the growth baseline
+  renderProjects(); renderChapters(); renderCodex(); renderStats(); save();
+  if(window.innerWidth<=760) $("chapters").classList.remove("open");
+}
+function switchProject(id){
+  if(id === S.projectId) return;
+  cur().body = draft.value;                 // persist outgoing WIP's open chapter
+  S.projectId = id;
+  loadProject(); draft.focus();
+}
+function addProject(){
+  const name = prompt("Name your new WIP:", "");
+  if(name === null) return;
+  cur().body = draft.value;
+  const p = freshProject(name.trim());
+  S.projects.push(p); S.projectId = p.id;
+  loadProject(); draft.focus();
+}
+function delProject(id){
+  if(S.projects.length<=1){ toast("Keep at least one WIP."); return; }
+  const p = S.projects.find(x=>x.id===id);
+  if(!confirm(`Delete "${p.name||'Untitled WIP'}" — ALL its chapters and codex entries?`)) return;
+  S.projects = S.projects.filter(x=>x.id!==id);
+  if(S.projectId===id) S.projectId = S.projects[0].id;
+  loadProject();
+}
+$("prAdd").onclick = addProject;
 
 /* ---- chapters ------------------------------------------------------- */
 function renderChapters(){
-  $("chlist").innerHTML = S.chapters.map((c,i)=>`<div class="chitem${c.id===S.currentId?' on':''}" data-id="${c.id}">
+  $("chlist").innerHTML = P().chapters.map((c,i)=>`<div class="chitem${c.id===P().currentId?' on':''}" data-id="${c.id}">
     <div class="chmain"><span class="chname">${esc(c.title)||"Untitled"}</span><span class="chwc">${wc(c.body)}</span></div>
     <div class="chctl">
       <button data-act="up" ${i===0?'disabled':''} title="Move up">↑</button>
-      <button data-act="down" ${i===S.chapters.length-1?'disabled':''} title="Move down">↓</button>
+      <button data-act="down" ${i===P().chapters.length-1?'disabled':''} title="Move down">↓</button>
       <button data-act="del" title="Delete chapter">✕</button>
     </div></div>`).join("");
   $("chlist").querySelectorAll(".chitem").forEach(el=>{
@@ -409,32 +468,32 @@ function renderChapters(){
 }
 function switchChapter(id){
   cur().body = draft.value;                 // persist outgoing chapter
-  S.currentId = id;
+  P().currentId = id;
   draft.value = cur().body; chTitle.value = cur().title;   // load incoming (total unchanged)
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
   renderChapters(); updateJump(); save(); draft.focus();
 }
 function addChapter(){
   cur().body = draft.value;
-  const ch = {id:uid(), title:`Chapter ${S.chapters.length+1}`, body:""};
-  S.chapters.push(ch); S.currentId = ch.id;
+  const ch = {id:uid(), title:`Chapter ${P().chapters.length+1}`, body:""};
+  P().chapters.push(ch); P().currentId = ch.id;
   draft.value = ""; chTitle.value = ch.title;
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
   renderChapters(); renderStats(); save(); chTitle.focus();
 }
 function moveChapter(id,dir){
-  const i = S.chapters.findIndex(c=>c.id===id), j = i+dir;
-  if(j<0 || j>=S.chapters.length) return;
-  [S.chapters[i],S.chapters[j]] = [S.chapters[j],S.chapters[i]];
+  const i = P().chapters.findIndex(c=>c.id===id), j = i+dir;
+  if(j<0 || j>=P().chapters.length) return;
+  [P().chapters[i],P().chapters[j]] = [P().chapters[j],P().chapters[i]];
   renderChapters(); save();
 }
 function delChapter(id){
-  if(S.chapters.length<=1){ toast("Keep at least one chapter."); return; }
-  const c = S.chapters.find(x=>x.id===id);
+  if(P().chapters.length<=1){ toast("Keep at least one chapter."); return; }
+  const c = P().chapters.find(x=>x.id===id);
   if(!confirm(`Delete "${c.title||'Untitled'}" and its text?`)) return;
   cur().body = draft.value;                 // persist current edits before removing
-  S.chapters = S.chapters.filter(x=>x.id!==id);
-  if(S.currentId===id) S.currentId = S.chapters[0].id;
+  P().chapters = P().chapters.filter(x=>x.id!==id);
+  if(P().currentId===id) P().currentId = P().chapters[0].id;
   draft.value = cur().body; chTitle.value = cur().title;
   S.lastCount = totalWords();               // total shrank — resync so future typing counts right
   renderChapters(); renderStats(); save();
@@ -487,12 +546,12 @@ function buildTabs(){
 }
 function renderCodex(){
   const q = $("csearch").value.toLowerCase();
-  let items = S.codex.filter(e=>filter==="All"||e.type===filter)
+  let items = P().codex.filter(e=>filter==="All"||e.type===filter)
     .filter(e=>!q || (e.name+" "+e.body).toLowerCase().includes(q))
     .sort((a,b)=>a.name.localeCompare(b.name));
   const list = $("clist");
   if(!items.length){
-    list.innerHTML = `<div class="cempty">${S.codex.length
+    list.innerHTML = `<div class="cempty">${P().codex.length
       ? "No entries match."
       : "Your world starts empty.<br>Add a character, a place, a faction —<br>then glance at it while you write."}</div>`;
     return;
@@ -505,7 +564,7 @@ function renderCodex(){
 function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 
 function openEntry(id, preset){
-  editing = id ? S.codex.find(e=>e.id===id) : {id:uid(), type:(filter!=="All"?filter:"Character"), name:preset||"", body:""};
+  editing = id ? P().codex.find(e=>e.id===id) : {id:uid(), type:(filter!=="All"?filter:"Character"), name:preset||"", body:""};
   $("eName").value = editing.name; $("eType").value = editing.type; $("eBody").value = editing.body;
   $("eDel").style.display = id ? "" : "none";
   $("cListView").style.display="none"; $("cEditView").style.display="flex";
@@ -514,10 +573,10 @@ function openEntry(id, preset){
 $("eSave").onclick = ()=>{
   editing.name = $("eName").value.trim(); editing.type = $("eType").value; editing.body = $("eBody").value;
   if(!editing.name){ toast("Give it a name first."); return; }
-  if(!S.codex.includes(editing)) S.codex.push(editing);
+  if(!P().codex.includes(editing)) P().codex.push(editing);
   save(); backToList(); toast("Saved to codex.");
 };
-$("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ S.codex = S.codex.filter(e=>e!==editing); save(); backToList(); } };
+$("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ P().codex = P().codex.filter(e=>e!==editing); save(); backToList(); } };
 $("eBack").onclick = backToList;
 function backToList(){ editing=null; $("cEditView").style.display="none"; $("cListView").style.display="flex"; renderCodex(); updateJump(); }
 $("cNew").onclick = ()=>openEntry(null);
@@ -528,7 +587,7 @@ $("csearch").oninput = renderCodex;
 $("bSel").onclick = ()=>{
   const sel = draft.value.slice(draft.selectionStart, draft.selectionEnd).trim();
   openCodexPanel();
-  const ex = sel && S.codex.find(e=>e.name.trim().toLowerCase()===sel.toLowerCase());
+  const ex = sel && P().codex.find(e=>e.name.trim().toLowerCase()===sel.toLowerCase());
   if(ex){ openEntry(ex.id); return; }
   openEntry(null, sel.slice(0,60));
   if(!sel) toast("Tip: select a name in your draft first.");
@@ -541,7 +600,7 @@ $("bSel").onclick = ()=>{
 function mentionAt(text, pos){
   const hay = text.toLowerCase();
   let best = null, bestLen = 0;
-  for(const e of S.codex){
+  for(const e of P().codex){
     const nm = (e.name||"").trim().toLowerCase();
     if(nm.length <= bestLen) continue;
     for(let i = hay.indexOf(nm); i !== -1; i = hay.indexOf(nm, i+1)){
@@ -619,9 +678,9 @@ function dl(name, text, mime){
 $("bExport").onclick = ()=>{
   const what = prompt("Export:  1 = manuscript (.md)   2 = full backup (.json)   3 = restore backup","1");
   if(what==="1"){
-    const ms = S.chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
-    const cd = S.codex.length ? "\n\n---\n\n# Codex\n\n"+S.codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
-    dl((S.title||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${S.title||"Untitled"}\n\n${ms}${cd}`, "text/markdown");
+    const ms = P().chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
+    const cd = P().codex.length ? "\n\n---\n\n# Codex\n\n"+P().codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
+    dl((P().name||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${P().name||"Untitled"}\n\n${ms}${cd}`, "text/markdown");
   } else if(what==="2"){
     dl("writeordie-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
   } else if(what==="3"){
@@ -697,9 +756,9 @@ async function pull(){
 }
 function applyState(s){
   S = normalize(s);
-  mtitle.value = S.title; draft.value = cur().body; chTitle.value = cur().title;
+  mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
   S.lastCount = totalWords();
-  rollover(); renderChapters(); renderCodex(); renderStats(); renderDeath(); save();
+  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
 }
 function renderCloud(){
@@ -721,7 +780,7 @@ $("cloudOutBtn").onclick = async ()=>{
 };
 
 /* ---- boot ----------------------------------------------------------- */
-rollover(); buildTabs(); renderCodex(); renderChapters(); renderStats(); renderDeath(); save(); cloudInit();
+rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); save(); cloudInit();
 // catch a midnight crossing (or days of neglect) while the tab was left open
 window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
 </script>
