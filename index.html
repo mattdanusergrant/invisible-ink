@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Write or Die — write enough, or the story dies</title>
+<style>
+  /* ---- theme ---------------------------------------------------------- */
+  :root{
+    --bg:#f3ece0; --panel:#fbf7ef; --ink:#2c2620; --muted:#8a7f6f;
+    --line:#e3d8c6; --accent:#9a5b3f; --accent-soft:#e9d7c8; --good:#5b8a5b;
+    --danger:#b23b2e; --danger-soft:rgba(178,59,46,.28);
+    --shadow:0 1px 2px rgba(60,40,20,.06),0 6px 20px rgba(60,40,20,.07);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  :root[data-theme="night"]{
+    --bg:#1a1714; --panel:#221d18; --ink:#e8ddcd; --muted:#9b8d79;
+    --line:#332a22; --accent:#d39873; --accent-soft:#3a2c22; --good:#8fbf8f;
+    --danger:#e06c5a; --danger-soft:rgba(224,108,90,.3);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  button{font-family:inherit;cursor:pointer}
+  /* ---- top bar -------------------------------------------------------- */
+  header{
+    display:flex;align-items:center;gap:14px;padding:10px 16px;
+    border-bottom:1px solid var(--line);background:var(--panel);
+    box-shadow:var(--shadow);flex:none;z-index:5;
+  }
+  .brand{font-family:var(--serif);font-weight:600;font-size:18px;letter-spacing:.2px;
+    color:var(--accent);white-space:nowrap}
+  .brand small{color:var(--muted);font-weight:400;font-size:11px;display:block;letter-spacing:.4px}
+  #mtitle{
+    font-family:var(--serif);font-size:16px;border:none;background:transparent;color:var(--ink);
+    padding:6px 8px;border-radius:8px;min-width:120px;flex:1 1 auto;
+  }
+  #mtitle:focus{outline:none;background:var(--bg)}
+  .chips{display:flex;gap:8px;align-items:center}
+  .chip{display:flex;flex-direction:column;align-items:center;background:var(--bg);
+    border:1px solid var(--line);border-radius:10px;padding:5px 11px;line-height:1.15;min-width:62px}
+  .chip b{font-size:15px;font-variant-numeric:tabular-nums}
+  .chip span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .chip.goal{position:relative}
+  .chip.goal.met b{color:var(--good)}
+  .ring{--p:0;width:30px;height:30px;border-radius:50%;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--line) 0);
+    display:grid;place-items:center}
+  .ring::after{content:"";width:22px;height:22px;border-radius:50%;background:var(--bg)}
+  .tools{display:flex;gap:6px;margin-left:auto}
+  .tbtn{background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    border-radius:9px;padding:7px 11px;font-size:13px;white-space:nowrap}
+  .tbtn:hover{border-color:var(--accent)}
+  .tbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* ---- layout --------------------------------------------------------- */
+  main{flex:1;display:flex;min-height:0}
+  .editor{flex:1;display:flex;flex-direction:column;min-width:0}
+  .etools{display:flex;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);
+    align-items:center;color:var(--muted);font-size:12px}
+  .etools .sp{margin-left:auto}
+  .chtitle{font-family:var(--serif);font-size:22px;font-weight:600;border:none;
+    background:transparent;color:var(--ink);padding:18px clamp(16px,8vw,90px) 0;outline:none;width:100%}
+  .chtitle::placeholder{color:var(--muted);opacity:.55}
+  #draft{
+    flex:1;width:100%;border:none;resize:none;background:transparent;color:var(--ink);
+    font-family:var(--serif);font-size:19px;line-height:1.75;padding:14px clamp(16px,8vw,90px) 40px;
+    outline:none;
+  }
+  #draft::placeholder{color:var(--muted);opacity:.7}
+  /* ---- chapters rail -------------------------------------------------- */
+  .chapters{width:240px;flex:none;border-right:1px solid var(--line);background:var(--panel);
+    display:flex;flex-direction:column;min-height:0}
+  .chhead{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 7px;
+    font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .chlist{flex:1;overflow:auto;padding:0 8px 10px}
+  .chitem{border:1px solid transparent;border-radius:9px;margin:3px 2px;padding:7px 9px;cursor:pointer}
+  .chitem:hover{background:var(--bg)}
+  .chitem.on{background:var(--bg);border-color:var(--accent)}
+  .chmain{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .chname{font-family:var(--serif);font-size:14px;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chwc{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+  .chctl{display:none;gap:4px;margin-top:6px}
+  .chitem:hover .chctl,.chitem.on .chctl{display:flex}
+  .chctl button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--muted);
+    border-radius:6px;font-size:11px;padding:2px 0}
+  .chctl button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .chctl button:disabled{opacity:.3;cursor:default}
+  /* ---- codex ---------------------------------------------------------- */
+  aside{width:330px;flex:none;border-left:1px solid var(--line);background:var(--panel);
+    display:flex;flex-direction:column;min-height:0}
+  .ctabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px 6px}
+  .ctab{border:1px solid var(--line);background:var(--bg);color:var(--muted);
+    border-radius:999px;padding:4px 10px;font-size:11.5px}
+  .ctab.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+  .csearch{margin:2px 12px 8px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;
+    background:var(--bg);color:var(--ink);font-size:13px}
+  .clist{flex:1;overflow:auto;padding:0 8px 8px}
+  .centry{padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin:6px 4px;
+    background:var(--bg);cursor:pointer}
+  .centry:hover{border-color:var(--accent)}
+  .centry .nm{font-family:var(--serif);font-size:14.5px;font-weight:600}
+  .centry .ty{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .centry .pv{font-size:12px;color:var(--muted);margin-top:3px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .cempty{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px;line-height:1.6}
+  .cnew{margin:0 12px 12px;width:calc(100% - 24px)}
+  /* entry editor */
+  .ced{display:flex;flex-direction:column;gap:8px;padding:12px;height:100%;overflow:auto}
+  .ced input,.ced select,.ced textarea{font-family:var(--sans);font-size:14px;color:var(--ink);
+    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+  .ced textarea{flex:1;min-height:160px;resize:vertical;font-family:var(--serif);font-size:15px;line-height:1.6}
+  .ced .row{display:flex;gap:8px}.ced .row>*{flex:1}
+  .ced .nm{font-family:var(--serif);font-size:18px}
+  /* ---- focus mode ----------------------------------------------------- */
+  body.focus header .chips,body.focus header .brand small,body.focus .etools,
+  body.focus aside,body.focus .chapters,body.focus .chtitle{display:none}
+  body.focus #draft{padding-top:8vh}
+  /* ---- overlay / sprint ---------------------------------------------- */
+  .ov{position:fixed;inset:0;background:rgba(20,14,8,.45);display:none;
+    align-items:center;justify-content:center;z-index:20}
+  .ov.on{display:flex}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:24px;width:min(380px,92vw);box-shadow:var(--shadow);text-align:center}
+  .card h2{font-family:var(--serif);margin:0 0 4px;color:var(--accent)}
+  .card p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .durs{display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+  .dur{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;
+    padding:10px 14px;font-size:14px}
+  .dur.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .clock{font-family:var(--serif);font-size:52px;font-variant-numeric:tabular-nums;margin:6px 0}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .sub b{color:var(--ink);font-size:18px}
+  .ghist{font-size:12px;color:var(--muted);margin-top:14px;text-align:left;max-height:120px;overflow:auto}
+  .ghist div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line)}
+  /* ---- lives / peril / death ----------------------------------------- */
+  .chip.lives b{letter-spacing:1px;color:var(--accent)}
+  .chip.lives.danger{border-color:var(--danger);animation:pulse 1.3s ease-in-out infinite}
+  .chip.lives.danger b{color:var(--danger)}
+  @keyframes pulse{50%{box-shadow:0 0 0 3px var(--danger-soft)}}
+  #peril{flex:none;background:var(--danger);color:#fff;text-align:center;
+    padding:7px 14px;font-size:13px;font-weight:600;letter-spacing:.2px;z-index:6}
+  body.focus #peril{display:none !important}
+  .card.dead .skull{font-size:60px;line-height:1;margin-bottom:6px}
+  .card.dead h2{color:var(--danger)}
+  /* ---- toast ---------------------------------------------------------- */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,40px);
+    background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;font-size:14px;
+    opacity:0;transition:.3s;pointer-events:none;z-index:30;box-shadow:var(--shadow);max-width:90vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (max-width:760px){
+    aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
+      transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
+    aside.open{transform:translateX(0)}
+    .chapters{position:fixed;left:0;top:0;bottom:0;width:min(280px,80vw);z-index:15;
+      transform:translateX(-100%);transition:.25s;box-shadow:var(--shadow)}
+    .chapters.open{transform:translateX(0)}
+    .brand small{display:none}.chip{min-width:50px;padding:4px 8px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Write or Die<small>write — or the story dies</small></div>
+  <input id="mtitle" placeholder="Untitled manuscript" />
+  <div class="chips">
+    <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
+    <div class="chip goal" id="cGoal" title="Click to set your daily word goal">
+      <div class="ring" id="ring"><b id="todayWords" style="position:absolute">0</b></div>
+      <span>today / <i id="goalNum">500</i></span>
+    </div>
+    <div class="chip"><b id="streak">0</b><span>🔥 streak</span></div>
+    <div class="chip"><b id="total">0</b><span>total</span></div>
+  </div>
+  <div class="tools">
+    <button class="tbtn" id="bChapters" title="Chapters">📑</button>
+    <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
+    <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
+    <button class="tbtn" id="bTheme" title="Day / night">☾</button>
+    <button class="tbtn" id="bExport" title="Export & backup">↓</button>
+    <button class="tbtn" id="bCodex">📖 Codex</button>
+  </div>
+</header>
+
+<div id="peril" style="display:none">⚠ One life left — hit today's goal or the story dies.</div>
+
+<main>
+  <nav class="chapters" id="chapters">
+    <div class="chhead"><span>Chapters</span>
+      <button class="tbtn" id="chAdd" title="Add chapter" style="padding:3px 10px">＋</button></div>
+    <div class="chlist" id="chlist"></div>
+  </nav>
+
+  <section class="editor">
+    <input id="chTitle" class="chtitle" placeholder="Chapter title" />
+    <div class="etools">
+      <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
+      <span class="sp" id="counts">0 words</span>
+    </div>
+    <textarea id="draft" placeholder="The first sentence is the hardest. Write it badly — you can fix it later. Just begin…"></textarea>
+  </section>
+
+  <aside id="codex">
+    <!-- list view -->
+    <div id="cListView" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="ctabs" id="ctabs"></div>
+      <input class="csearch" id="csearch" placeholder="Search the codex…" />
+      <div class="clist" id="clist"></div>
+      <button class="tbtn primary cnew" id="cNew">＋ New entry</button>
+    </div>
+    <!-- editor view -->
+    <div id="cEditView" class="ced" style="display:none">
+      <input class="nm" id="eName" placeholder="Name" />
+      <div class="row">
+        <select id="eType"></select>
+      </div>
+      <textarea id="eBody" placeholder="Who / what / where. Appearance, motives, history, secrets — whatever you need at a glance while drafting."></textarea>
+      <div class="row">
+        <button class="tbtn primary" id="eSave">Save</button>
+        <button class="tbtn" id="eBack">Back</button>
+        <button class="tbtn" id="eDel" style="color:var(--accent)">Delete</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- game over -->
+<div class="ov" id="ovDead">
+  <div class="card dead">
+    <div class="skull">☠</div>
+    <h2>The story died with the writer.</h2>
+    <p>Too many days went by without enough words. The thread went cold.</p>
+    <div class="sub" id="deadStats"></div>
+    <button class="tbtn primary" id="reviveBtn" style="width:100%;padding:11px">Begin a new life</button>
+    <p style="margin:14px 0 0;font-size:11.5px">Your manuscript is safe — every word you wrote is still here.</p>
+  </div>
+</div>
+
+<!-- sprint overlay -->
+<div class="ov" id="ovSprint">
+  <div class="card" id="sprintSetup">
+    <h2>Writing sprint</h2>
+    <p>Pick a length. Write without stopping. The world can wait.</p>
+    <div class="durs" id="durs"></div>
+    <button class="tbtn primary" id="sStart" style="width:100%;padding:11px">Begin</button>
+    <div class="ghist" id="ghist"></div>
+  </div>
+  <div class="card" id="sprintRun" style="display:none">
+    <h2 id="runTitle">Sprint</h2>
+    <div class="clock" id="clock">25:00</div>
+    <div class="sub"><b id="runWords">0</b> words written</div>
+    <button class="tbtn" id="sEnd" style="width:100%;padding:11px">End sprint</button>
+  </div>
+</div>
+
+<input type="file" id="restoreFile" accept="application/json" style="display:none" />
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* Write or Die — a single-file writing studio: productivity (goals, sprints,
+   streaks) + a worldbuilding codex, with a survival layer (miss your daily goal
+   and you lose a life; hit zero and the story dies). Vanilla JS, no deps,
+   localStorage save. #LLM-generated */
+
+const KEY = "writeordie.v1", THEME_KEY = "writeordie.theme", MAX_LIVES = 3;
+// one-time migration from the project's former name ("Loomwright")
+if(!localStorage.getItem(KEY) && localStorage.getItem("loomwright.v1"))
+  localStorage.setItem(KEY, localStorage.getItem("loomwright.v1"));
+if(!localStorage.getItem(THEME_KEY) && localStorage.getItem("loomwright.theme"))
+  localStorage.setItem(THEME_KEY, localStorage.getItem("loomwright.theme"));
+const TYPES = ["Character","Location","Faction","Lore","Timeline"];
+const $ = id => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0,10);
+const wc = t => (t.trim().match(/\S+/g) || []).length;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+/* ---- state ---------------------------------------------------------- */
+const fresh = () => { const id = uid(); return {
+  title:"", goal:500,
+  day:today(), todayWords:0, lastCount:0,   // words written today = additive deltas
+  streak:0, lastGoalDay:"",                 // streak bookkeeping
+  lives:MAX_LIVES, started:false, dead:false,  // survival layer
+  codex:[], sprints:[],
+  chapters:[{id, title:"Chapter 1", body:""}], currentId:id
+};};
+// fold any loaded/restored object into the current shape (migrates v1 single-body)
+function normalize(s){
+  const st = Object.assign(fresh(), s);
+  if(!Array.isArray(s.chapters) || !s.chapters.length){   // v1 (single body) or empty — migrate
+    const ch = {id:uid(), title:"Chapter 1", body:(s.body||"")};
+    st.chapters = [ch]; st.currentId = ch.id;
+  }
+  if(!st.currentId || !st.chapters.find(c=>c.id===st.currentId)) st.currentId = st.chapters[0].id;
+  if(typeof st.lives !== "number") st.lives = MAX_LIVES;
+  st.started = !!st.started || st.chapters.some(c=>wc(c.body)>0);   // stakes begin once you've written
+  delete st.body;
+  return st;
+}
+let S = load();
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s&&s.title!==undefined) return normalize(s); }catch{}
+  return fresh();
+}
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); }
+
+/* ---- daily rollover + survival + streak ---------------------------- */
+function rollover(){
+  if(S.day === today()) return;
+  // Days have passed. Tax every day that fell short of the goal: the just-ended
+  // tracked day (if it missed) plus every empty day skipped in between.
+  if(S.started){
+    const gap = dayDiff(S.day, today());
+    const misses = (gap - 1) + (S.todayWords >= S.goal ? 0 : 1);
+    if(misses > 0){
+      S.lives = Math.max(0, S.lives - misses);
+      if(S.lives === 0) S.dead = true;
+    }
+  }
+  // new day: today's count resets; lastCount stays at manuscript length so
+  // continuing to type counts as new words, not a fresh dump.
+  S.day = today(); S.todayWords = 0;
+}
+function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
+function creditStreak(){
+  if(S.lastGoalDay === today()) return;            // already counted today
+  if(S.lastGoalDay && dayDiff(S.lastGoalDay,today())===1) S.streak++;  // consecutive
+  else S.streak = 1;                               // first day / gap
+  S.lastGoalDay = today();
+  S.lives = Math.min(MAX_LIVES, S.lives + 1);      // writing pulls you back from the brink
+  toast(`🔥 Goal met — ${S.streak}-day streak!`);
+}
+function liveStreak(){
+  // display: a streak only counts if the last goal day was today or yesterday
+  if(!S.lastGoalDay) return 0;
+  const d = dayDiff(S.lastGoalDay, today());
+  return d<=1 ? S.streak : 0;
+}
+
+/* ---- the manuscript (chapters) ------------------------------------- */
+const draft = $("draft"), mtitle = $("mtitle"), chTitle = $("chTitle");
+const cur = () => S.chapters.find(c=>c.id===S.currentId) || S.chapters[0];
+const totalWords = () => S.chapters.reduce((n,c)=>n+wc(c.body),0);
+mtitle.value = S.title; draft.value = cur().body; chTitle.value = cur().title;
+S.lastCount = totalWords();
+
+function onWrite(){
+  if(S.dead) return;                                 // game over until revived
+  rollover();
+  if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
+  cur().body = draft.value;
+  const t = totalWords();
+  if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
+  S.lastCount = t;
+  if(t > 0) S.started = true;                        // the stakes are now live
+  if(sprint.active) $("runWords").textContent = S.todayWords - sprint.startWords;
+  if(S.todayWords >= S.goal) creditStreak();
+  renderStats(); renderChapters(); save();
+}
+draft.addEventListener("input", onWrite);
+mtitle.addEventListener("input", ()=>{ S.title = mtitle.value; save(); });
+chTitle.addEventListener("input", ()=>{ cur().title = chTitle.value; renderChapters(); save(); });
+
+/* ---- chapters ------------------------------------------------------- */
+function renderChapters(){
+  $("chlist").innerHTML = S.chapters.map((c,i)=>`<div class="chitem${c.id===S.currentId?' on':''}" data-id="${c.id}">
+    <div class="chmain"><span class="chname">${esc(c.title)||"Untitled"}</span><span class="chwc">${wc(c.body)}</span></div>
+    <div class="chctl">
+      <button data-act="up" ${i===0?'disabled':''} title="Move up">↑</button>
+      <button data-act="down" ${i===S.chapters.length-1?'disabled':''} title="Move down">↓</button>
+      <button data-act="del" title="Delete chapter">✕</button>
+    </div></div>`).join("");
+  $("chlist").querySelectorAll(".chitem").forEach(el=>{
+    const id = el.dataset.id;
+    el.querySelector(".chmain").onclick = ()=>switchChapter(id);
+    el.querySelectorAll(".chctl button").forEach(b=>b.onclick=ev=>{
+      ev.stopPropagation();
+      if(b.dataset.act==="up") moveChapter(id,-1);
+      else if(b.dataset.act==="down") moveChapter(id,1);
+      else delChapter(id);
+    });
+  });
+}
+function switchChapter(id){
+  cur().body = draft.value;                 // persist outgoing chapter
+  S.currentId = id;
+  draft.value = cur().body; chTitle.value = cur().title;   // load incoming (total unchanged)
+  if(window.innerWidth<=760) $("chapters").classList.remove("open");
+  renderChapters(); save(); draft.focus();
+}
+function addChapter(){
+  cur().body = draft.value;
+  const ch = {id:uid(), title:`Chapter ${S.chapters.length+1}`, body:""};
+  S.chapters.push(ch); S.currentId = ch.id;
+  draft.value = ""; chTitle.value = ch.title;
+  if(window.innerWidth<=760) $("chapters").classList.remove("open");
+  renderChapters(); renderStats(); save(); chTitle.focus();
+}
+function moveChapter(id,dir){
+  const i = S.chapters.findIndex(c=>c.id===id), j = i+dir;
+  if(j<0 || j>=S.chapters.length) return;
+  [S.chapters[i],S.chapters[j]] = [S.chapters[j],S.chapters[i]];
+  renderChapters(); save();
+}
+function delChapter(id){
+  if(S.chapters.length<=1){ toast("Keep at least one chapter."); return; }
+  const c = S.chapters.find(x=>x.id===id);
+  if(!confirm(`Delete "${c.title||'Untitled'}" and its text?`)) return;
+  cur().body = draft.value;                 // persist current edits before removing
+  S.chapters = S.chapters.filter(x=>x.id!==id);
+  if(S.currentId===id) S.currentId = S.chapters[0].id;
+  draft.value = cur().body; chTitle.value = cur().title;
+  S.lastCount = totalWords();               // total shrank — resync so future typing counts right
+  renderChapters(); renderStats(); save();
+}
+$("chAdd").onclick = addChapter;
+$("bChapters").onclick = ()=>$("chapters").classList.toggle("open");
+
+function renderStats(){
+  $("todayWords").textContent = S.todayWords;
+  $("goalNum").textContent = S.goal;
+  $("total").textContent = S.lastCount.toLocaleString();
+  $("streak").textContent = liveStreak();
+  $("counts").textContent = `${S.lastCount.toLocaleString()} words` +
+    (S.todayWords ? ` · ${S.todayWords} today` : "");
+  const p = Math.min(100, Math.round(S.todayWords / S.goal * 100));
+  $("ring").style.setProperty("--p", p);
+  $("cGoal").classList.toggle("met", S.todayWords >= S.goal);
+  // survival
+  $("lives").textContent = "♥".repeat(S.lives) + "♡".repeat(Math.max(0, MAX_LIVES - S.lives));
+  $("cLives").classList.toggle("danger", S.lives <= 1 && !S.dead);
+  const peril = S.started && !S.dead && S.lives <= 1 && S.todayWords < S.goal;
+  $("peril").style.display = peril ? "" : "none";
+}
+function renderDeath(){
+  $("ovDead").classList.toggle("on", !!S.dead);
+  if(S.dead) $("deadStats").innerHTML =
+    `<b>${S.lastCount.toLocaleString()}</b> words written before the silence.`;
+}
+$("reviveBtn").onclick = ()=>{
+  S.dead = false; S.lives = MAX_LIVES; S.streak = 0; S.lastGoalDay = "";
+  renderStats(); renderDeath(); save();
+  toast("A new life. Don't waste it — write.");
+  draft.focus();
+};
+
+/* set goal */
+$("cGoal").onclick = ()=>{
+  const v = prompt("Daily word goal:", S.goal);
+  if(v && +v>0){ S.goal = Math.round(+v); renderStats(); save(); }
+};
+
+/* ---- codex ---------------------------------------------------------- */
+let filter = "All", editing = null;
+function buildTabs(){
+  const tabs = ["All",...TYPES];
+  $("ctabs").innerHTML = tabs.map(t=>`<button class="ctab${t===filter?' on':''}" data-t="${t}">${t}</button>`).join("");
+  $("ctabs").querySelectorAll(".ctab").forEach(b=>b.onclick=()=>{filter=b.dataset.t;buildTabs();renderCodex();});
+  $("eType").innerHTML = TYPES.map(t=>`<option>${t}</option>`).join("");
+}
+function renderCodex(){
+  const q = $("csearch").value.toLowerCase();
+  let items = S.codex.filter(e=>filter==="All"||e.type===filter)
+    .filter(e=>!q || (e.name+" "+e.body).toLowerCase().includes(q))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const list = $("clist");
+  if(!items.length){
+    list.innerHTML = `<div class="cempty">${S.codex.length
+      ? "No entries match."
+      : "Your world starts empty.<br>Add a character, a place, a faction —<br>then glance at it while you write."}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(e=>`<div class="centry" data-id="${e.id}">
+    <div class="ty">${e.type}</div><div class="nm">${esc(e.name)||"Untitled"}</div>
+    ${e.body?`<div class="pv">${esc(e.body)}</div>`:""}</div>`).join("");
+  list.querySelectorAll(".centry").forEach(el=>el.onclick=()=>openEntry(el.dataset.id));
+}
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function openEntry(id, preset){
+  editing = id ? S.codex.find(e=>e.id===id) : {id:uid(), type:(filter!=="All"?filter:"Character"), name:preset||"", body:""};
+  $("eName").value = editing.name; $("eType").value = editing.type; $("eBody").value = editing.body;
+  $("eDel").style.display = id ? "" : "none";
+  $("cListView").style.display="none"; $("cEditView").style.display="flex";
+  $("eName").focus();
+}
+$("eSave").onclick = ()=>{
+  editing.name = $("eName").value.trim(); editing.type = $("eType").value; editing.body = $("eBody").value;
+  if(!editing.name){ toast("Give it a name first."); return; }
+  if(!S.codex.includes(editing)) S.codex.push(editing);
+  save(); backToList(); toast("Saved to codex.");
+};
+$("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ S.codex = S.codex.filter(e=>e!==editing); save(); backToList(); } };
+$("eBack").onclick = backToList;
+function backToList(){ editing=null; $("cEditView").style.display="none"; $("cListView").style.display="flex"; renderCodex(); }
+$("cNew").onclick = ()=>openEntry(null);
+$("csearch").oninput = renderCodex;
+
+/* add a codex entry pre-filled from the selected manuscript text */
+$("bSel").onclick = ()=>{
+  const sel = draft.value.slice(draft.selectionStart, draft.selectionEnd).trim();
+  openCodexPanel();
+  openEntry(null, sel.slice(0,60));
+  if(!sel) toast("Tip: select a name in your draft first.");
+};
+
+/* ---- codex panel toggle (mobile) ----------------------------------- */
+function openCodexPanel(){ if(window.innerWidth<=760) $("codex").classList.add("open"); }
+$("bCodex").onclick = ()=>$("codex").classList.toggle("open");
+
+/* ---- sprint --------------------------------------------------------- */
+let sprint = {active:false}, sTimer=null, chosen=15;
+function buildDurs(){
+  $("durs").innerHTML = [10,15,25,45].map(m=>`<button class="dur${m===chosen?' on':''}" data-m="${m}">${m}<small style="display:block;font-size:9px;opacity:.7">min</small></button>`).join("");
+  $("durs").querySelectorAll(".dur").forEach(b=>b.onclick=()=>{chosen=+b.dataset.m;buildDurs();});
+}
+function renderHist(){
+  const h = S.sprints.slice(-6).reverse();
+  $("ghist").innerHTML = h.length
+    ? "<div style='border:none;color:var(--accent);font-weight:600'>recent sprints</div>"+
+      h.map(s=>`<div><span>${s.date.slice(5)} · ${s.dur}m</span><span>${s.words}w · ${s.wpm} wpm</span></div>`).join("")
+    : "";
+}
+$("bSprint").onclick = ()=>{ $("sprintSetup").style.display=""; $("sprintRun").style.display="none"; buildDurs(); renderHist(); $("ovSprint").classList.add("on"); };
+$("sStart").onclick = ()=>{
+  rollover();
+  sprint = {active:true, startWords:S.todayWords, end:Date.now()+chosen*60000, dur:chosen};
+  $("sprintSetup").style.display="none"; $("sprintRun").style.display="";
+  $("runTitle").textContent = `${chosen}-minute sprint`; $("runWords").textContent="0";
+  draft.focus(); tick(); sTimer=setInterval(tick,250);
+};
+function tick(){
+  const ms = Math.max(0, sprint.end-Date.now());
+  const m = Math.floor(ms/60000), s = Math.floor(ms%60000/1000);
+  $("clock").textContent = `${m}:${String(s).padStart(2,"0")}`;
+  if(ms<=0) endSprint(true);
+}
+$("sEnd").onclick = ()=>endSprint(false);
+function endSprint(complete){
+  clearInterval(sTimer);
+  const words = Math.max(0, S.todayWords - sprint.startWords);
+  const wpm = Math.round(words / sprint.dur);
+  S.sprints.push({date:today(), dur:sprint.dur, words, wpm});
+  if(S.sprints.length>40) S.sprints = S.sprints.slice(-40);
+  sprint.active=false; save();
+  $("ovSprint").classList.remove("on");
+  toast(complete ? `⏱ Time! ${words} words at ${wpm} wpm. Beautiful.` : `Sprint ended — ${words} words. Every one counts.`);
+}
+
+/* ---- focus / theme -------------------------------------------------- */
+$("bFocus").onclick = ()=>document.body.classList.toggle("focus");
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.body.classList.remove("focus"); });
+function applyTheme(t){ document.documentElement.dataset.theme=t; $("bTheme").textContent = t==="night"?"☀":"☾"; localStorage.setItem(THEME_KEY,t); }
+$("bTheme").onclick = ()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
+applyTheme(localStorage.getItem(THEME_KEY) || "day");
+
+/* ---- export / backup / restore ------------------------------------- */
+function dl(name, text, mime){
+  const b = new Blob([text],{type:mime}); const u = URL.createObjectURL(b);
+  const a = document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+}
+$("bExport").onclick = ()=>{
+  const what = prompt("Export:  1 = manuscript (.md)   2 = full backup (.json)   3 = restore backup","1");
+  if(what==="1"){
+    const ms = S.chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
+    const cd = S.codex.length ? "\n\n---\n\n# Codex\n\n"+S.codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
+    dl((S.title||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${S.title||"Untitled"}\n\n${ms}${cd}`, "text/markdown");
+  } else if(what==="2"){
+    dl("writeordie-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
+  } else if(what==="3"){
+    $("restoreFile").click();
+  }
+};
+$("restoreFile").onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{ S = normalize(JSON.parse(r.result)); localStorage.setItem(KEY,JSON.stringify(S)); location.reload(); }catch{ toast("Couldn't read that backup."); } };
+  r.readAsText(f);
+};
+
+/* ---- toast ---------------------------------------------------------- */
+let toastT;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ---- boot ----------------------------------------------------------- */
+rollover(); buildTabs(); renderCodex(); renderChapters(); renderStats(); renderDeath(); save();
+// catch a midnight crossing (or days of neglect) while the tab was left open
+window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
+</script>
+</body>
+</html>
