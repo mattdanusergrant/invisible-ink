@@ -199,6 +199,7 @@
   <section class="editor">
     <input id="chTitle" class="chtitle" placeholder="Chapter title" />
     <div class="etools">
+      <button class="tbtn" id="bJump" title="Caret is on a codex name — jump to its entry" style="display:none;padding:4px 9px;font-size:12px">📖 <span id="jumpName"></span></button>
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 words</span>
     </div>
@@ -392,7 +393,7 @@ function switchChapter(id){
   S.currentId = id;
   draft.value = cur().body; chTitle.value = cur().title;   // load incoming (total unchanged)
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
-  renderChapters(); save(); draft.focus();
+  renderChapters(); updateJump(); save(); draft.focus();
 }
 function addChapter(){
   cur().body = draft.value;
@@ -437,6 +438,7 @@ function renderStats(){
   $("cLives").classList.toggle("danger", S.lives <= 1 && !S.dead);
   const peril = S.started && !S.dead && S.lives <= 1 && S.todayWords < S.goal;
   $("peril").style.display = peril ? "" : "none";
+  updateJump();   // draft may have changed under the caret
 }
 function renderDeath(){
   $("ovDead").classList.toggle("on", !!S.dead);
@@ -498,17 +500,47 @@ $("eSave").onclick = ()=>{
 };
 $("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ S.codex = S.codex.filter(e=>e!==editing); save(); backToList(); } };
 $("eBack").onclick = backToList;
-function backToList(){ editing=null; $("cEditView").style.display="none"; $("cListView").style.display="flex"; renderCodex(); }
+function backToList(){ editing=null; $("cEditView").style.display="none"; $("cListView").style.display="flex"; renderCodex(); updateJump(); }
 $("cNew").onclick = ()=>openEntry(null);
 $("csearch").oninput = renderCodex;
 
-/* add a codex entry pre-filled from the selected manuscript text */
+/* add a codex entry pre-filled from the selected manuscript text —
+   or, if the selection IS an entry's name, open that entry (no duplicates) */
 $("bSel").onclick = ()=>{
   const sel = draft.value.slice(draft.selectionStart, draft.selectionEnd).trim();
   openCodexPanel();
+  const ex = sel && S.codex.find(e=>e.name.trim().toLowerCase()===sel.toLowerCase());
+  if(ex){ openEntry(ex.id); return; }
   openEntry(null, sel.slice(0,60));
   if(!sel) toast("Tip: select a name in your draft first.");
 };
+
+/* ---- codex cross-links ----------------------------------------------
+   When the caret rests on a codex name in the draft, a 📖 chip appears in
+   the editor toolbar — click it to jump to that entry. Longest name wins
+   ("Mara Venn" beats "Mara"); matches are whole-word, case-insensitive. */
+function mentionAt(text, pos){
+  const hay = text.toLowerCase();
+  let best = null, bestLen = 0;
+  for(const e of S.codex){
+    const nm = (e.name||"").trim().toLowerCase();
+    if(nm.length <= bestLen) continue;
+    for(let i = hay.indexOf(nm); i !== -1; i = hay.indexOf(nm, i+1)){
+      if(pos < i) break;                       // occurrences run left→right
+      if(pos > i + nm.length) continue;        // caret past this one
+      if(/\w/.test(hay[i-1]||" ") || /\w/.test(hay[i+nm.length]||" ")) continue; // mid-word
+      best = e; bestLen = nm.length; break;
+    }
+  }
+  return best;
+}
+function updateJump(){
+  const e = mentionAt(draft.value, draft.selectionStart);
+  $("bJump").style.display = e ? "" : "none";
+  if(e){ $("jumpName").textContent = e.name; $("bJump").dataset.id = e.id; }
+}
+["click","keyup","select"].forEach(ev=>draft.addEventListener(ev, updateJump));
+$("bJump").onclick = ()=>{ openCodexPanel(); openEntry($("bJump").dataset.id); };
 
 /* ---- codex panel toggle (mobile) ----------------------------------- */
 function openCodexPanel(){ if(window.innerWidth<=760) $("codex").classList.add("open"); }
