@@ -7,18 +7,18 @@
 <style>
   /* ---- theme ---------------------------------------------------------- */
   :root{
-    --bg:#fdf9f2; --panel:#ffffff; --ink:#2c2620; --muted:#8a7f6f;
-    --line:#ece3d4; --accent:#9a5b3f; --accent-soft:#e9d7c8; --good:#5b8a5b;
-    --danger:#b23b2e; --danger-soft:rgba(178,59,46,.28);
-    --shadow:0 1px 2px rgba(60,40,20,.06),0 6px 20px rgba(60,40,20,.07);
+    --bg:#ffffff; --panel:#ffffff; --ink:#000000; --muted:#999999;
+    --line:#e0e0e0; --accent:#000000; --accent-soft:#f2f2f2; --good:#000000;
+    --danger:#000000; --danger-soft:rgba(0,0,0,0.12);
+    --shadow:0 1px 2px rgba(0,0,0,0.05),0 4px 16px rgba(0,0,0,0.07);
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
     --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   :root[data-theme="night"]{
-    --bg:#0d0b09; --panel:#141110; --ink:#ede3cf; --muted:#9b8d79;
-    --line:#1e1812; --accent:#d39873; --accent-soft:#261d14; --good:#8fbf8f;
-    --danger:#e06c5a; --danger-soft:rgba(224,108,90,.3);
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    --bg:#000000; --panel:#000000; --ink:#ffffff; --muted:#777777;
+    --line:#222222; --accent:#ffffff; --accent-soft:#111111; --good:#ffffff;
+    --danger:#ffffff; --danger-soft:rgba(255,255,255,0.12);
+    --shadow:0 1px 2px rgba(0,0,0,0.5),0 4px 16px rgba(0,0,0,0.6);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -36,7 +36,6 @@
   .brand{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.12em;
     color:var(--accent);white-space:nowrap;text-transform:uppercase}
   .brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.05em;text-transform:none}
-  :root[data-theme="night"] .brand{color:#fff}
   #mtitle{
     font-family:var(--serif);font-size:16px;border:none;background:transparent;color:var(--ink);
     padding:6px 8px;border-radius:8px;min-width:120px;flex:1 1 auto;
@@ -57,7 +56,7 @@
   .tbtn{background:var(--bg);border:1px solid var(--line);color:var(--ink);
     border-radius:9px;padding:7px 11px;font-size:13px;white-space:nowrap}
   .tbtn:hover{border-color:var(--accent)}
-  .tbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .tbtn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
   /* ---- layout --------------------------------------------------------- */
   main{flex:1;display:flex;min-height:0}
   .editor{flex:1;display:flex;flex-direction:column;min-width:0}
