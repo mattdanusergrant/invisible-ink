@@ -67,11 +67,11 @@
     background:transparent;color:var(--ink);padding:18px clamp(16px,8vw,90px) 0;outline:none;width:100%}
   .chtitle::placeholder{color:var(--muted);opacity:.55}
   #draft{
-    flex:1;width:100%;border:none;resize:none;background:transparent;color:var(--ink);
+    flex:1;width:100%;border:none;background:transparent;color:var(--ink);
     font-family:var(--serif);font-size:19px;line-height:1.75;padding:14px clamp(16px,8vw,90px) 40px;
-    outline:none;
+    outline:none;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
   }
-  #draft::placeholder{color:var(--muted);opacity:.7}
+  #draft:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.7;pointer-events:none}
   /* ---- chapters rail -------------------------------------------------- */
   .chapters{width:240px;flex:none;border-right:1px solid var(--line);background:var(--panel);
     display:flex;flex-direction:column;min-height:0}
@@ -155,7 +155,7 @@
   #toast.show{opacity:1;transform:translate(-50%,0)}
   /* ---- invisible ink -------------------------------------------------- */
   #draft{caret-color:var(--accent)}
-  #draft.ink-hiding{color:transparent !important;transition:color 2s ease}
+  .ink-char{transition:opacity 0.8s ease}
   @media (max-width:760px){
     aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
       transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
@@ -183,7 +183,7 @@
   <div class="tools">
     <button class="tbtn" id="bChapters" title="Chapters">📑</button>
     <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
-    <button class="tbtn" id="bInvisible" title="Invisible ink — words fade 3 s after you type them; everything stays">Invisible</button>
+    <button class="tbtn" id="bInvisible" title="Invisible ink — each letter fades 5 s after you type it; everything stays">Invisible</button>
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
     <button class="tbtn" id="bExport" title="Export & backup">↓</button>
@@ -212,7 +212,7 @@
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 words</span>
     </div>
-    <textarea id="draft" placeholder="The first sentence is the hardest. Write it badly — you can fix it later. Just begin…"></textarea>
+    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="The first sentence is the hardest. Write it badly — you can fix it later. Just begin…"></div>
   </section>
 
   <aside id="codex">
@@ -308,6 +308,60 @@ const today = () => new Date().toISOString().slice(0,10);
 const wc = t => (t.trim().match(/\S+/g) || []).length;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
+/* ---- contenteditable helpers --------------------------------------- */
+function getDraftText(){
+  // walk DOM so <br> and block elements become \n regardless of browser quirks
+  function walk(node){
+    if(node.nodeType===Node.TEXT_NODE) return node.textContent;
+    if(node.nodeName==="BR") return "\n";
+    const isBlock = node!==draft && /^(DIV|P)$/.test(node.nodeName);
+    const inner = Array.from(node.childNodes).map(walk).join("");
+    return isBlock ? "\n"+inner : inner;
+  }
+  return walk(draft).replace(/\n$/, "") || "";
+}
+function setDraftText(text){
+  draft.innerHTML = "";
+  if(!text) return;
+  text.split("\n").forEach((line, i)=>{
+    if(i>0) draft.appendChild(document.createElement("br"));
+    if(line) draft.appendChild(document.createTextNode(line));
+  });
+}
+function getCaretPos(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return 0;
+  const range = sel.getRangeAt(0);
+  const pre = document.createRange();
+  pre.selectNodeContents(draft);
+  pre.setEnd(range.startContainer, range.startOffset);
+  return pre.toString().length;
+}
+function wrapLastChar(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  const offset = range.startOffset;
+  if(node.nodeType!==Node.TEXT_NODE || !draft.contains(node) || offset<1) return;
+  // isolate the just-typed character via splitText
+  if(offset < node.textContent.length) node.splitText(offset);
+  const charNode = offset>1 ? node.splitText(offset-1) : node;
+  const span = document.createElement("span");
+  span.className = "ink-char";
+  span.dataset.t = Date.now().toString();
+  charNode.parentNode.insertBefore(span, charNode);
+  span.appendChild(charNode);
+  // restore cursor right after the new span
+  const r = document.createRange();
+  r.setStartAfter(span); r.collapse(true);
+  sel.removeAllRanges(); sel.addRange(r);
+  // schedule fade
+  setTimeout(()=>{
+    if(span.isConnected){ span.style.transition="opacity 0.8s ease"; span.style.opacity="0"; }
+  }, 5000);
+}
+
 /* ---- state ---------------------------------------------------------- */
 const freshProject = name => { const cid = uid(); return {
   id: uid(), name: name || "Untitled WIP",
@@ -320,7 +374,7 @@ const fresh = () => { const p = freshProject(); return {
   streak:0, lastGoalDay:"",                 // streak bookkeeping
   lives:MAX_LIVES, started:false, dead:false,  // survival layer
   sprints:[],
-  invisible: false,                          // global invisible-ink mode
+  invisible: true,                           // global invisible-ink mode
   projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
 // fold any loaded/restored object into the current shape
@@ -376,7 +430,7 @@ function rollover(){
     if(p.blindMode && p.blindDraft && p.blindDay !== today()){
       p.blindSegments.push({day:p.blindDay||S.day, text:p.blindDraft});
       p.blindDraft = ""; p.blindDay = "";
-      if(p.id === S.projectId) draft.value = "";  // clear live editor
+      if(p.id === S.projectId) setDraftText("");  // clear live editor
     }
   });
   // new day: today's count resets; lastCount stays at manuscript length so
@@ -406,16 +460,15 @@ const cur = () => P().chapters.find(c=>c.id===P().currentId) || P().chapters[0];
 const blindWc = p => (p.blindSegments||[]).reduce((n,s)=>n+wc(s.text),0) + wc(p.blindDraft||"");
 const totalWords = () => { const p=P(); return p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p); };
 const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p);
-mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
+mtitle.value = P().name; setDraftText(cur().body); chTitle.value = cur().title;
 S.lastCount = totalWords();
 
 function onWrite(){
   if(S.dead) return;                                 // game over until revived
   rollover();
   if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
-  if(P().blindMode){ P().blindDraft = draft.value; if(!P().blindDay) P().blindDay = today(); }
-  else cur().body = draft.value;
-  if(S.invisible){ inkShow(); scheduleInkFade(); }
+  if(P().blindMode){ P().blindDraft = getDraftText(); if(!P().blindDay) P().blindDay = today(); }
+  else cur().body = getDraftText();
   const t = totalWords();
   if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
   S.lastCount = t;
@@ -424,7 +477,10 @@ function onWrite(){
   if(S.todayWords >= S.goal) creditStreak();
   renderStats(); renderChapters(); save();
 }
-draft.addEventListener("input", onWrite);
+draft.addEventListener("input", e=>{
+  if(S.invisible && e.inputType==="insertText" && e.data) wrapLastChar();
+  onWrite();
+});
 mtitle.addEventListener("input", ()=>{ P().name = mtitle.value; renderProjects(); save(); });
 chTitle.addEventListener("input", ()=>{ cur().title = chTitle.value; renderChapters(); save(); });
 
@@ -448,13 +504,13 @@ function renderProjects(){
 function loadProject(){
   const p = P(); mtitle.value = p.name;
   if(p.blindMode){
-    draft.value = p.blindDraft || ""; chTitle.value = "";
+    setDraftText(p.blindDraft || ""); chTitle.value = "";
     $("chTitle").style.display = "none";
-    draft.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
+    draft.dataset.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
   } else {
-    draft.value = cur().body; chTitle.value = cur().title;
+    setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
-    draft.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+    draft.dataset.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
   }
   S.lastCount = totalWords();
   peeking = false; $("bPeek").textContent = "👁 Peek";
@@ -464,15 +520,15 @@ function loadProject(){
 }
 function switchProject(id){
   if(id === S.projectId) return;
-  if(P().blindMode) P().blindDraft = draft.value;   // persist outgoing blind draft
-  else cur().body = draft.value;                     // persist outgoing chapter
+  if(P().blindMode) P().blindDraft = getDraftText();   // persist outgoing blind draft
+  else cur().body = getDraftText();                     // persist outgoing chapter
   S.projectId = id;
   loadProject(); draft.focus();
 }
 function addProject(){
   const name = prompt("Name your new WIP:", "");
   if(name === null) return;
-  cur().body = draft.value;
+  cur().body = getDraftText();
   const p = freshProject(name.trim());
   S.projects.push(p); S.projectId = p.id;
   loadProject(); draft.focus();
@@ -491,16 +547,16 @@ function toggleBlind(id){
   p.blindMode = !p.blindMode;
   if(id === S.projectId){
     if(p.blindMode){
-      cur().body = draft.value;                     // stash the open chapter
+      cur().body = getDraftText();                  // stash the open chapter
       if(!p.blindDay) p.blindDay = today();
-      draft.value = p.blindDraft || "";
+      setDraftText(p.blindDraft || "");
       $("chTitle").style.display = "none";
-      draft.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
+      draft.dataset.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
     } else {
-      p.blindDraft = draft.value;                   // stash the blind draft
-      draft.value = cur().body; chTitle.value = cur().title;
+      p.blindDraft = getDraftText();                // stash the blind draft
+      setDraftText(cur().body); chTitle.value = cur().title;
       $("chTitle").style.display = "";
-      draft.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+      draft.dataset.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
     }
     S.lastCount = totalWords();
     renderChapters(); renderStats();
@@ -511,29 +567,30 @@ function toggleBlind(id){
 }
 
 /* ---- invisible ink -------------------------------------------------- */
-let inkFadeT = null, peeking = false;
-function scheduleInkFade(){
-  if(!S.invisible || peeking) return;
-  clearTimeout(inkFadeT);
-  inkFadeT = setTimeout(()=>draft.classList.add('ink-hiding'), 3000);
-}
-function inkShow(){
-  clearTimeout(inkFadeT);
-  draft.classList.remove('ink-hiding');
-}
+let peeking = false;
 function applyInvisibleUI(){
   $("bInvisible").classList.toggle("primary", S.invisible);
   $("bPeek").style.display = S.invisible ? "" : "none";
-  if(S.invisible) scheduleInkFade(); else { inkShow(); peeking = false; $("bPeek").textContent = "👁 Peek"; }
+  if(!S.invisible){ peeking = false; $("bPeek").textContent = "👁 Peek"; }
 }
 $("bInvisible").onclick = ()=>{
   S.invisible = !S.invisible; applyInvisibleUI(); save();
-  toast(S.invisible ? "Invisible ink on — words fade in 3 s. Everything stays." : "Invisible ink off.");
+  toast(S.invisible ? "Invisible ink on — each letter fades after 5 s. Everything stays." : "Invisible ink off.");
 };
 $("bPeek").onclick = ()=>{
   peeking = !peeking;
-  if(peeking){ inkShow(); $("bPeek").textContent = "🙈 Hide"; }
-  else{ $("bPeek").textContent = "👁 Peek"; scheduleInkFade(); }
+  const chars = draft.querySelectorAll(".ink-char");
+  if(peeking){
+    chars.forEach(s=>{ s.style.transition="none"; s.style.opacity="1"; });
+    $("bPeek").textContent = "🙈 Hide";
+  } else {
+    chars.forEach(s=>{
+      const age = Date.now() - (+s.dataset.t||0);
+      s.style.transition = age>=5000 ? "none" : "";
+      s.style.opacity = age>=5000 ? "0" : "1";
+    });
+    $("bPeek").textContent = "👁 Peek";
+  }
 };
 
 /* ---- chapters ------------------------------------------------------- */
@@ -569,17 +626,17 @@ function renderChapters(){
   });
 }
 function switchChapter(id){
-  cur().body = draft.value;                 // persist outgoing chapter
+  cur().body = getDraftText();              // persist outgoing chapter
   P().currentId = id;
-  draft.value = cur().body; chTitle.value = cur().title;   // load incoming (total unchanged)
+  setDraftText(cur().body); chTitle.value = cur().title;   // load incoming (total unchanged)
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
   renderChapters(); updateJump(); save(); draft.focus();
 }
 function addChapter(){
-  cur().body = draft.value;
+  cur().body = getDraftText();
   const ch = {id:uid(), title:`Chapter ${P().chapters.length+1}`, body:""};
   P().chapters.push(ch); P().currentId = ch.id;
-  draft.value = ""; chTitle.value = ch.title;
+  setDraftText(""); chTitle.value = ch.title;
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
   renderChapters(); renderStats(); save(); chTitle.focus();
 }
@@ -593,10 +650,10 @@ function delChapter(id){
   if(P().chapters.length<=1){ toast("Keep at least one chapter."); return; }
   const c = P().chapters.find(x=>x.id===id);
   if(!confirm(`Delete "${c.title||'Untitled'}" and its text?`)) return;
-  cur().body = draft.value;                 // persist current edits before removing
+  cur().body = getDraftText();              // persist current edits before removing
   P().chapters = P().chapters.filter(x=>x.id!==id);
   if(P().currentId===id) P().currentId = P().chapters[0].id;
-  draft.value = cur().body; chTitle.value = cur().title;
+  setDraftText(cur().body); chTitle.value = cur().title;
   S.lastCount = totalWords();               // total shrank — resync so future typing counts right
   renderChapters(); renderStats(); save();
 }
@@ -687,7 +744,7 @@ $("csearch").oninput = renderCodex;
 /* add a codex entry pre-filled from the selected manuscript text —
    or, if the selection IS an entry's name, open that entry (no duplicates) */
 $("bSel").onclick = ()=>{
-  const sel = draft.value.slice(draft.selectionStart, draft.selectionEnd).trim();
+  const sel = (window.getSelection()||{}).toString().trim();
   openCodexPanel();
   const ex = sel && P().codex.find(e=>e.name.trim().toLowerCase()===sel.toLowerCase());
   if(ex){ openEntry(ex.id); return; }
@@ -715,11 +772,13 @@ function mentionAt(text, pos){
   return best;
 }
 function updateJump(){
-  const e = mentionAt(draft.value, draft.selectionStart);
+  const e = mentionAt(getDraftText(), getCaretPos());
   $("bJump").style.display = e ? "" : "none";
   if(e){ $("jumpName").textContent = e.name; $("bJump").dataset.id = e.id; }
 }
-["click","keyup","select"].forEach(ev=>draft.addEventListener(ev, updateJump));
+draft.addEventListener("click", updateJump);
+draft.addEventListener("keyup", updateJump);
+document.addEventListener("selectionchange", ()=>{ if(document.activeElement===draft) updateJump(); });
 $("bJump").onclick = ()=>{ openCodexPanel(); openEntry($("bJump").dataset.id); };
 
 /* ---- codex panel toggle (mobile) ----------------------------------- */
@@ -863,14 +922,14 @@ function applyState(s){
   S = normalize(s);
   mtitle.value = P().name;
   if(P().blindMode){
-    draft.value = P().blindDraft || ""; chTitle.value = "";
+    setDraftText(P().blindDraft || ""); chTitle.value = "";
     $("chTitle").style.display = "none";
   } else {
-    draft.value = cur().body; chTitle.value = cur().title;
+    setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
   }
   S.lastCount = totalWords();
-  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); save();
+  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); applyInvisibleUI(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
 }
 function renderCloud(){
