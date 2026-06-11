@@ -182,8 +182,8 @@
     <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
-    <button class="tbtn" id="bExport" title="Export & backup">↓</button>
-    <button class="tbtn" id="bCloud" title="Account & sync">☁</button>
+    <button class="tbtn" id="bExport" title="Export &amp; backup">↓</button>
+    <button class="tbtn" id="bCloud" title="Account &amp; sync">☁</button>
     <button class="tbtn" id="bCodex">📖 Codex</button>
   </div>
 </header>
@@ -306,7 +306,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6
 /* ---- state ---------------------------------------------------------- */
 const freshProject = name => { const cid = uid(); return {
   id: uid(), name: name || "Untitled WIP",
-  chapters:[{id:cid, title:"Chapter 1", body:""}], currentId: cid, codex:[]
+  chapters:[{id:cid, title:"Chapter 1", body:""}], currentId: cid, codex:[],
+  blindMode:false, blindDraft:"", blindDay:"", blindSegments:[]
 };};
 const fresh = () => { const p = freshProject(); return {
   goal:500,
@@ -331,6 +332,10 @@ function normalize(s){
     if(!Array.isArray(p.chapters) || !p.chapters.length) p.chapters = [{id:uid(), title:"Chapter 1", body:""}];
     if(!p.currentId || !p.chapters.find(c=>c.id===p.currentId)) p.currentId = p.chapters[0].id;
     if(!Array.isArray(p.codex)) p.codex = [];
+    if(typeof p.blindMode !== "boolean") p.blindMode = false;
+    if(typeof p.blindDraft !== "string") p.blindDraft = "";
+    if(!p.blindDay) p.blindDay = "";
+    if(!Array.isArray(p.blindSegments)) p.blindSegments = [];
   });
   if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
   if(typeof st.lives !== "number") st.lives = MAX_LIVES;
@@ -359,6 +364,14 @@ function rollover(){
       if(S.lives === 0) S.dead = true;
     }
   }
+  // archive any blind drafts typed on the previous day
+  S.projects.forEach(p=>{
+    if(p.blindMode && p.blindDraft && p.blindDay !== today()){
+      p.blindSegments.push({day:p.blindDay||S.day, text:p.blindDraft});
+      p.blindDraft = ""; p.blindDay = "";
+      if(p.id === S.projectId) draft.value = "";  // clear live editor
+    }
+  });
   // new day: today's count resets; lastCount stays at manuscript length so
   // continuing to type counts as new words, not a fresh dump.
   S.day = today(); S.todayWords = 0;
@@ -383,8 +396,9 @@ function liveStreak(){
 const draft = $("draft"), mtitle = $("mtitle"), chTitle = $("chTitle");
 const P = () => S.projects.find(p=>p.id===S.projectId) || S.projects[0];
 const cur = () => P().chapters.find(c=>c.id===P().currentId) || P().chapters[0];
-const totalWords = () => P().chapters.reduce((n,c)=>n+wc(c.body),0);
-const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0);
+const blindWc = p => (p.blindSegments||[]).reduce((n,s)=>n+wc(s.text),0) + wc(p.blindDraft||"");
+const totalWords = () => { const p=P(); return p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p); };
+const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p);
 mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
 S.lastCount = totalWords();
 
@@ -392,7 +406,8 @@ function onWrite(){
   if(S.dead) return;                                 // game over until revived
   rollover();
   if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
-  cur().body = draft.value;
+  if(P().blindMode){ P().blindDraft = draft.value; if(!P().blindDay) P().blindDay = today(); }
+  else cur().body = draft.value;
   const t = totalWords();
   if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
   S.lastCount = t;
@@ -409,22 +424,38 @@ chTitle.addEventListener("input", ()=>{ cur().title = chTitle.value; renderChapt
 function renderProjects(){
   $("prlist").innerHTML = S.projects.map(p=>`<div class="chitem${p.id===S.projectId?' on':''}" data-id="${p.id}">
     <div class="chmain"><span class="chname">${esc(p.name)||"Untitled WIP"}</span><span class="chwc">${projWords(p)}</span></div>
-    <div class="chctl"><button data-act="del" title="Delete WIP">✕</button></div></div>`).join("");
+    <div class="chctl">
+      <button data-act="blind" style="${p.blindMode?'border-color:var(--accent);color:var(--accent)':''}" title="${p.blindMode?'Exit blind mode':'Blind mode: hide prior sessions while you write'}">Blind</button>
+      <button data-act="del" title="Delete WIP">✕</button>
+    </div></div>`).join("");
   $("prlist").querySelectorAll(".chitem").forEach(el=>{
     const id = el.dataset.id;
     el.querySelector(".chmain").onclick = ()=>switchProject(id);
-    el.querySelector(".chctl button").onclick = ev=>{ ev.stopPropagation(); delProject(id); };
+    el.querySelectorAll(".chctl button").forEach(b=>b.onclick=ev=>{
+      ev.stopPropagation();
+      if(b.dataset.act==="blind") toggleBlind(id); else delProject(id);
+    });
   });
 }
 function loadProject(){
-  mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
-  S.lastCount = totalWords();   // switching WIPs isn't writing — resync the growth baseline
+  const p = P(); mtitle.value = p.name;
+  if(p.blindMode){
+    draft.value = p.blindDraft || ""; chTitle.value = "";
+    $("chTitle").style.display = "none";
+    draft.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
+  } else {
+    draft.value = cur().body; chTitle.value = cur().title;
+    $("chTitle").style.display = "";
+    draft.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+  }
+  S.lastCount = totalWords();
   renderProjects(); renderChapters(); renderCodex(); renderStats(); save();
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
 }
 function switchProject(id){
   if(id === S.projectId) return;
-  cur().body = draft.value;                 // persist outgoing WIP's open chapter
+  if(P().blindMode) P().blindDraft = draft.value;   // persist outgoing blind draft
+  else cur().body = draft.value;                     // persist outgoing chapter
   S.projectId = id;
   loadProject(); draft.focus();
 }
@@ -445,9 +476,44 @@ function delProject(id){
   loadProject();
 }
 $("prAdd").onclick = addProject;
+function toggleBlind(id){
+  const p = S.projects.find(x=>x.id===id); if(!p) return;
+  p.blindMode = !p.blindMode;
+  if(id === S.projectId){
+    if(p.blindMode){
+      cur().body = draft.value;                     // stash the open chapter
+      if(!p.blindDay) p.blindDay = today();
+      draft.value = p.blindDraft || "";
+      $("chTitle").style.display = "none";
+      draft.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
+    } else {
+      p.blindDraft = draft.value;                   // stash the blind draft
+      draft.value = cur().body; chTitle.value = cur().title;
+      $("chTitle").style.display = "";
+      draft.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+    }
+    S.lastCount = totalWords();
+    renderChapters(); renderStats();
+    draft.focus();
+  }
+  renderProjects(); save();
+  toast(p.blindMode ? "Blind mode on — prior sessions hidden. Write forward." : "Blind mode off.");
+}
 
 /* ---- chapters ------------------------------------------------------- */
 function renderChapters(){
+  if(P().blindMode){
+    const segs = P().blindSegments.length;
+    const chWds = P().chapters.reduce((n,c)=>n+wc(c.body),0);
+    const sealed = [chWds ? `${chWds} chapter word${chWds!==1?'s':''}` : "", segs ? `${segs} prior session${segs>1?'s':''}` : ""].filter(Boolean).join(", ");
+    $("chlist").innerHTML = `<div class="cempty" style="font-size:12px;padding:18px 12px;line-height:1.7">
+      <div style="font-size:22px;margin-bottom:6px">🚫👁</div>
+      <b>Blind mode</b><br>Prior sessions hidden.<br>Write forward.
+      ${sealed ? `<br><br><span style="opacity:.55">${sealed} sealed.</span>` : ""}
+    </div>`;
+    $("chAdd").style.display = "none"; return;
+  }
+  $("chAdd").style.display = "";
   $("chlist").innerHTML = P().chapters.map((c,i)=>`<div class="chitem${c.id===P().currentId?' on':''}" data-id="${c.id}">
     <div class="chmain"><span class="chname">${esc(c.title)||"Untitled"}</span><span class="chwc">${wc(c.body)}</span></div>
     <div class="chctl">
@@ -678,9 +744,12 @@ function dl(name, text, mime){
 $("bExport").onclick = ()=>{
   const what = prompt("Export:  1 = manuscript (.md)   2 = full backup (.json)   3 = restore backup","1");
   if(what==="1"){
-    const ms = P().chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
-    const cd = P().codex.length ? "\n\n---\n\n# Codex\n\n"+P().codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
-    dl((P().name||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${P().name||"Untitled"}\n\n${ms}${cd}`, "text/markdown");
+    const p = P();
+    const ms = p.chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
+    const blindParts = [...(p.blindSegments||[]).map(s=>s.text), p.blindDraft||""].filter(Boolean);
+    const bl = blindParts.length ? "\n\n---\n\n# Blind Drafts\n\n"+blindParts.join("\n\n---\n\n") : "";
+    const cd = p.codex.length ? "\n\n---\n\n# Codex\n\n"+p.codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
+    dl((p.name||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${p.name||"Untitled"}\n\n${ms}${bl}${cd}`, "text/markdown");
   } else if(what==="2"){
     dl("writeordie-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
   } else if(what==="3"){
@@ -756,7 +825,14 @@ async function pull(){
 }
 function applyState(s){
   S = normalize(s);
-  mtitle.value = P().name; draft.value = cur().body; chTitle.value = cur().title;
+  mtitle.value = P().name;
+  if(P().blindMode){
+    draft.value = P().blindDraft || ""; chTitle.value = "";
+    $("chTitle").style.display = "none";
+  } else {
+    draft.value = cur().body; chTitle.value = cur().title;
+    $("chTitle").style.display = "";
+  }
   S.lastCount = totalWords();
   rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
