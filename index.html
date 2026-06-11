@@ -156,6 +156,43 @@
   /* ---- invisible ink -------------------------------------------------- */
   #draft{caret-color:var(--accent)}
   .ink-char{transition:opacity 0.8s ease}
+  /* ---- progressive unlock -------------------------------------------- */
+  #minCounter{
+    position:fixed;bottom:24px;right:28px;font-size:13px;letter-spacing:.03em;
+    color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums;
+    transition:opacity .6s;
+  }
+  /* phases 0 and 1: hide everything except the writing area */
+  body[data-phase="0"] header,
+  body[data-phase="1"] header  { display:none }
+  body[data-phase="0"] .chapters,
+  body[data-phase="1"] .chapters { display:none }
+  body[data-phase="0"] aside,
+  body[data-phase="1"] aside   { display:none }
+  body[data-phase="0"] #peril,
+  body[data-phase="1"] #peril  { display:none !important }
+  body[data-phase="0"] #chTitle,
+  body[data-phase="1"] #chTitle { display:none }
+  /* phase 0: hide toolbar entirely */
+  body[data-phase="0"] .etools { display:none }
+  /* phase 1: toolbar visible but only Peek + word count */
+  body[data-phase="1"] #bJump,
+  body[data-phase="1"] #bSel  { display:none !important }
+  /* phases 0+1: give the blank page breathing room */
+  body[data-phase="0"] #draft,
+  body[data-phase="1"] #draft { padding-top:clamp(60px,18vh,140px) }
+  /* phase 2+: hide the floating counter */
+  body[data-phase="2"] #minCounter,
+  body[data-phase="3"] #minCounter { display:none }
+  /* phase 2: advanced chips and nav hidden until day 2 */
+  body[data-phase="2"] #cLives,
+  body[data-phase="2"] #cStreak,
+  body[data-phase="2"] #cTotal   { display:none }
+  body[data-phase="2"] #mtitle,
+  body[data-phase="2"] #bChapters,
+  body[data-phase="2"] #bExport,
+  body[data-phase="2"] #bCloud,
+  body[data-phase="2"] #bCodex   { display:none }
   @media (max-width:760px){
     aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
       transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
@@ -167,7 +204,7 @@
   }
 </style>
 </head>
-<body>
+<body data-phase="0">
 <header>
   <div class="brand">INVISIBLE INK<small>just keep writing</small></div>
   <input id="mtitle" placeholder="Name this WIP" />
@@ -177,8 +214,8 @@
       <div class="ring" id="ring"><b id="todayWords" style="position:absolute">0</b></div>
       <span>today / <i id="goalNum">500</i></span>
     </div>
-    <div class="chip"><b id="streak">0</b><span>🔥 streak</span></div>
-    <div class="chip"><b id="total">0</b><span>total</span></div>
+    <div class="chip" id="cStreak"><b id="streak">0</b><span>🔥 streak</span></div>
+    <div class="chip" id="cTotal"><b id="total">0</b><span>total</span></div>
   </div>
   <div class="tools">
     <button class="tbtn" id="bChapters" title="Chapters">📑</button>
@@ -193,6 +230,7 @@
 </header>
 
 <div id="peril" style="display:none">⚠ One life left — write today or the ink runs dry.</div>
+<div id="minCounter">0 / 500</div>
 
 <main>
   <nav class="chapters" id="chapters">
@@ -374,6 +412,7 @@ const fresh = () => { const p = freshProject(); return {
   streak:0, lastGoalDay:"",                 // streak bookkeeping
   lives:MAX_LIVES, started:false, dead:false,  // survival layer
   sprints:[],
+  phase: 0,                                  // progressive feature unlock (0–3)
   invisible: true,                           // global invisible-ink mode
   projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
@@ -399,7 +438,14 @@ function normalize(s){
   });
   if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
   if(typeof st.lives !== "number") st.lives = MAX_LIVES;
-  if(typeof st.invisible !== "boolean") st.invisible = false;
+  if(typeof st.invisible !== "boolean") st.invisible = true;
+  if(typeof st.phase !== "number"){
+    // migrate existing users straight to the right phase
+    if(st.streak >= 2 || (st.lastCount||0) > 1000) st.phase = 3;
+    else if(st.lastGoalDay) st.phase = 2;
+    else if((st.lastCount||0) > 0) st.phase = 1;
+    else st.phase = 0;
+  }
   st.started = !!st.started || st.projects.some(p=>p.chapters.some(c=>wc(c.body)>0));   // stakes begin once you've written
   delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
   return st;
@@ -475,6 +521,7 @@ function onWrite(){
   if(t > 0) S.started = true;                        // the stakes are now live
   if(sprint.active) $("runWords").textContent = S.todayWords - sprint.startWords;
   if(S.todayWords >= S.goal) creditStreak();
+  checkPhase();
   renderStats(); renderChapters(); save();
 }
 draft.addEventListener("input", e=>{
@@ -593,6 +640,31 @@ $("bPeek").onclick = ()=>{
   }
 };
 
+/* ---- progressive unlock --------------------------------------------- */
+function applyPhase(){
+  document.body.dataset.phase = S.phase;
+  renderMinCounter();
+}
+function renderMinCounter(){
+  const el = $("minCounter"); if(!el) return;
+  el.textContent = S.todayWords + " / " + S.goal;
+}
+function revealAllInk(){
+  draft.querySelectorAll(".ink-char").forEach(s=>{
+    s.style.transition = "opacity 1.2s ease";
+    s.style.opacity = "1";
+  });
+  S.invisible = false; applyInvisibleUI();
+  setTimeout(()=>{ draft.querySelectorAll(".ink-char").forEach(s=>s.style.transition=""); }, 1300);
+}
+function checkPhase(){
+  const prev = S.phase;
+  if(prev < 1 && S.lastCount > 0) S.phase = 1;
+  if(prev < 2 && S.todayWords >= S.goal){ S.phase = 2; revealAllInk(); toast("500 words. The ink is yours."); }
+  if(prev < 3 && (S.streak >= 2 || S.lastCount > 1000)) S.phase = 3;
+  if(S.phase !== prev){ applyPhase(); save(); }
+}
+
 /* ---- chapters ------------------------------------------------------- */
 function renderChapters(){
   if(P().blindMode){
@@ -675,6 +747,7 @@ function renderStats(){
   $("cLives").classList.toggle("danger", S.lives <= 1 && !S.dead);
   const peril = S.started && !S.dead && S.lives <= 1 && S.todayWords < S.goal;
   $("peril").style.display = peril ? "" : "none";
+  renderMinCounter();
   updateJump();   // draft may have changed under the caret
 }
 function renderDeath(){
@@ -955,7 +1028,7 @@ $("cloudOutBtn").onclick = async ()=>{
 };
 
 /* ---- boot ----------------------------------------------------------- */
-rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); applyInvisibleUI(); save(); cloudInit();
+rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); applyInvisibleUI(); applyPhase(); save(); cloudInit();
 // catch a midnight crossing (or days of neglect) while the tab was left open
 window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
 </script>
