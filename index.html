@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Write or Die — write enough, or the story dies</title>
+<title>It's Invisible Ink — write it. it hides. it's always there.</title>
 <style>
   /* ---- theme ---------------------------------------------------------- */
   :root{
@@ -153,6 +153,9 @@
     background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;font-size:14px;
     opacity:0;transition:.3s;pointer-events:none;z-index:30;box-shadow:var(--shadow);max-width:90vw}
   #toast.show{opacity:1;transform:translate(-50%,0)}
+  /* ---- invisible ink -------------------------------------------------- */
+  #draft{caret-color:var(--accent)}
+  #draft.ink-hiding{color:transparent !important;transition:color 2s ease}
   @media (max-width:760px){
     aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
       transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
@@ -166,7 +169,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">Write or Die<small>write — or the story dies</small></div>
+  <div class="brand">It's Invisible Ink<small>write it. it hides. it's always there.</small></div>
   <input id="mtitle" placeholder="Name this WIP" />
   <div class="chips">
     <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
@@ -180,15 +183,16 @@
   <div class="tools">
     <button class="tbtn" id="bChapters" title="Chapters">📑</button>
     <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
+    <button class="tbtn" id="bInvisible" title="Invisible ink — words fade 3 s after you type them; everything stays">Invisible</button>
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
-    <button class="tbtn" id="bExport" title="Export &amp; backup">↓</button>
-    <button class="tbtn" id="bCloud" title="Account &amp; sync">☁</button>
+    <button class="tbtn" id="bExport" title="Export & backup">↓</button>
+    <button class="tbtn" id="bCloud" title="Account & sync">☁</button>
     <button class="tbtn" id="bCodex">📖 Codex</button>
   </div>
 </header>
 
-<div id="peril" style="display:none">⚠ One life left — hit today's goal or the story dies.</div>
+<div id="peril" style="display:none">⚠ One life left — write today or the ink runs dry.</div>
 
 <main>
   <nav class="chapters" id="chapters">
@@ -204,6 +208,7 @@
     <input id="chTitle" class="chtitle" placeholder="Chapter title" />
     <div class="etools">
       <button class="tbtn" id="bJump" title="Caret is on a codex name — jump to its entry" style="display:none;padding:4px 9px;font-size:12px">📖 <span id="jumpName"></span></button>
+      <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none;padding:4px 9px;font-size:12px">👁 Peek</button>
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 words</span>
     </div>
@@ -238,8 +243,8 @@
 <div class="ov" id="ovDead">
   <div class="card dead">
     <div class="skull">☠</div>
-    <h2>The story died with the writer.</h2>
-    <p>Too many days went by without enough words. The thread went cold.</p>
+    <h2>The ink ran dry.</h2>
+    <p>Too many days without words. The ink dried up.</p>
     <div class="sub" id="deadStats"></div>
     <button class="tbtn primary" id="reviveBtn" style="width:100%;padding:11px">Begin a new life</button>
     <p style="margin:14px 0 0;font-size:11.5px">Your manuscript is safe — every word you wrote is still here.</p>
@@ -315,6 +320,7 @@ const fresh = () => { const p = freshProject(); return {
   streak:0, lastGoalDay:"",                 // streak bookkeeping
   lives:MAX_LIVES, started:false, dead:false,  // survival layer
   sprints:[],
+  invisible: false,                          // global invisible-ink mode
   projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
 // fold any loaded/restored object into the current shape
@@ -339,6 +345,7 @@ function normalize(s){
   });
   if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
   if(typeof st.lives !== "number") st.lives = MAX_LIVES;
+  if(typeof st.invisible !== "boolean") st.invisible = false;
   st.started = !!st.started || st.projects.some(p=>p.chapters.some(c=>wc(c.body)>0));   // stakes begin once you've written
   delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
   return st;
@@ -408,6 +415,7 @@ function onWrite(){
   if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
   if(P().blindMode){ P().blindDraft = draft.value; if(!P().blindDay) P().blindDay = today(); }
   else cur().body = draft.value;
+  if(S.invisible){ inkShow(); scheduleInkFade(); }
   const t = totalWords();
   if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
   S.lastCount = t;
@@ -449,6 +457,8 @@ function loadProject(){
     draft.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
   }
   S.lastCount = totalWords();
+  peeking = false; $("bPeek").textContent = "👁 Peek";
+  applyInvisibleUI();
   renderProjects(); renderChapters(); renderCodex(); renderStats(); save();
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
 }
@@ -499,6 +509,32 @@ function toggleBlind(id){
   renderProjects(); save();
   toast(p.blindMode ? "Blind mode on — prior sessions hidden. Write forward." : "Blind mode off.");
 }
+
+/* ---- invisible ink -------------------------------------------------- */
+let inkFadeT = null, peeking = false;
+function scheduleInkFade(){
+  if(!S.invisible || peeking) return;
+  clearTimeout(inkFadeT);
+  inkFadeT = setTimeout(()=>draft.classList.add('ink-hiding'), 3000);
+}
+function inkShow(){
+  clearTimeout(inkFadeT);
+  draft.classList.remove('ink-hiding');
+}
+function applyInvisibleUI(){
+  $("bInvisible").classList.toggle("primary", S.invisible);
+  $("bPeek").style.display = S.invisible ? "" : "none";
+  if(S.invisible) scheduleInkFade(); else { inkShow(); peeking = false; $("bPeek").textContent = "👁 Peek"; }
+}
+$("bInvisible").onclick = ()=>{
+  S.invisible = !S.invisible; applyInvisibleUI(); save();
+  toast(S.invisible ? "Invisible ink on — words fade in 3 s. Everything stays." : "Invisible ink off.");
+};
+$("bPeek").onclick = ()=>{
+  peeking = !peeking;
+  if(peeking){ inkShow(); $("bPeek").textContent = "🙈 Hide"; }
+  else{ $("bPeek").textContent = "👁 Peek"; scheduleInkFade(); }
+};
 
 /* ---- chapters ------------------------------------------------------- */
 function renderChapters(){
@@ -856,7 +892,7 @@ $("cloudOutBtn").onclick = async ()=>{
 };
 
 /* ---- boot ----------------------------------------------------------- */
-rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); save(); cloudInit();
+rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); applyInvisibleUI(); save(); cloudInit();
 // catch a midnight crossing (or days of neglect) while the tab was left open
 window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
 </script>
