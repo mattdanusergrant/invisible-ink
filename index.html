@@ -385,6 +385,12 @@ function wrapLastChar(){
   // isolate the just-typed character via splitText
   if(offset < node.textContent.length) node.splitText(offset);
   const charNode = offset>1 ? node.splitText(offset-1) : node;
+  // if the char landed inside an existing ink-char span (browser cursor snap),
+  // pull it out to a sibling position so it gets its own independent fade
+  const par = charNode.parentNode;
+  if(par !== draft && par.classList && par.classList.contains("ink-char")){
+    par.parentNode.insertBefore(charNode, par.nextSibling);
+  }
   const span = document.createElement("span");
   span.className = "ink-char";
   span.dataset.t = Date.now().toString();
