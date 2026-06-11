@@ -33,9 +33,10 @@
     border-bottom:1px solid var(--line);background:var(--panel);
     box-shadow:var(--shadow);flex:none;z-index:5;
   }
-  .brand{font-family:var(--serif);font-weight:600;font-size:18px;letter-spacing:.2px;
-    color:var(--accent);white-space:nowrap}
-  .brand small{color:var(--muted);font-weight:400;font-size:11px;display:block;letter-spacing:.4px}
+  .brand{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.12em;
+    color:var(--accent);white-space:nowrap;text-transform:uppercase}
+  .brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.05em;text-transform:none}
+  :root[data-theme="night"] .brand{color:#fff}
   #mtitle{
     font-family:var(--serif);font-size:16px;border:none;background:transparent;color:var(--ink);
     padding:6px 8px;border-radius:8px;min-width:120px;flex:1 1 auto;
@@ -169,7 +170,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">It's Invisible Ink<small>write it. it hides. it's always there.</small></div>
+  <div class="brand">INVISIBLE INK<small>just keep writing</small></div>
   <input id="mtitle" placeholder="Name this WIP" />
   <div class="chips">
     <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
@@ -804,17 +805,21 @@ $("sStart").onclick = ()=>{
   sprint = {active:true, startWords:S.todayWords, end:Date.now()+chosen*60000, dur:chosen};
   $("sprintSetup").style.display="none"; $("sprintRun").style.display="";
   $("runTitle").textContent = `${chosen}-minute sprint`; $("runWords").textContent="0";
+  $("ovSprint").classList.remove("on");
   draft.focus(); tick(); sTimer=setInterval(tick,250);
 };
 function tick(){
   const ms = Math.max(0, sprint.end-Date.now());
   const m = Math.floor(ms/60000), s = Math.floor(ms%60000/1000);
-  $("clock").textContent = `${m}:${String(s).padStart(2,"0")}`;
+  const t = `${m}:${String(s).padStart(2,"0")}`;
+  $("clock").textContent = t;
+  $("bSprint").textContent = `⏱ ${t}`;
   if(ms<=0) endSprint(true);
 }
 $("sEnd").onclick = ()=>endSprint(false);
 function endSprint(complete){
   clearInterval(sTimer);
+  $("bSprint").textContent = "⏱ Sprint";
   const words = Math.max(0, S.todayWords - sprint.startWords);
   const wpm = Math.round(words / sprint.dur);
   S.sprints.push({date:today(), dur:sprint.dur, words, wpm});
