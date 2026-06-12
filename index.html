@@ -1043,6 +1043,9 @@ $("cloudOutBtn").onclick = async ()=>{
 };
 
 /* ---- boot ----------------------------------------------------------- */
+if(new URLSearchParams(location.search).has("reset")){
+  localStorage.clear(); location.replace(location.pathname); // strip ?reset
+}
 rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); applyInvisibleUI(); applyPhase(); save(); cloudInit();
 // catch a midnight crossing (or days of neglect) while the tab was left open
 window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
