@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>It's Invisible Ink — write it. it hides. it's always there.</title>
+<title>Invisible Ink — write it. it hides. it's always there.</title>
 <style>
   /* ---- theme ---------------------------------------------------------- */
   :root{
@@ -233,8 +233,8 @@
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
     <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none">👁 Peek</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
-    <button class="tbtn" id="bExport" title="Export & backup">↓</button>
-    <button class="tbtn" id="bCloud" title="Account & sync">☁</button>
+    <button class="tbtn" id="bExport" title="Export &amp; backup">↓</button>
+    <button class="tbtn" id="bCloud" title="Account &amp; sync">☁</button>
     <button class="tbtn" id="bCodex">📖 Codex</button>
   </div>
 </header>
@@ -943,7 +943,7 @@ $("bExport").onclick = ()=>{
     const blindParts = [...(p.blindSegments||[]).map(s=>s.text), p.blindDraft||""].filter(Boolean);
     const bl = blindParts.length ? "\n\n---\n\n# Blind Drafts\n\n"+blindParts.join("\n\n---\n\n") : "";
     const cd = p.codex.length ? "\n\n---\n\n# Codex\n\n"+p.codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
-    dl((p.name||"manuscript").replace(/[^\w-]+/g,"_")+".md", `# ${p.name||"Untitled"}\n\n${ms}${bl}${cd}`, "text/markdown");
+    dl((p.name||"").replace(/[^\w-]+/g,"_")+".md", `# ${p.name||"Untitled"}\n\n${ms}${bl}${cd}`, "text/markdown");
   } else if(what==="2"){
     dl("writeordie-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
   } else if(what==="3"){
