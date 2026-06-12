@@ -178,7 +178,12 @@
   /* phase 1: toolbar visible but only Peek + word count */
   body[data-phase="1"] #bJump,
   body[data-phase="1"] #bSel  { display:none !important }
-  /* phases 0+1: give the blank page breathing room */
+  /* phases 0+1: float theme toggle to bottom-left corner */
+  body[data-phase="0"] #bTheme,
+  body[data-phase="1"] #bTheme {
+    position:fixed;bottom:24px;left:28px;z-index:10;
+  }
+  /* phases 0 and 1: give the blank page breathing room */
   body[data-phase="0"] #draft,
   body[data-phase="1"] #draft { padding-top:clamp(60px,18vh,140px) }
   /* phase 2+: hide the floating counter */
