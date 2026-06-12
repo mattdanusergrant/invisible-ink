@@ -219,7 +219,7 @@
   <input id="mtitle" placeholder="Name this WIP" />
   <div class="chips">
     <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
-    <div class="chip goal" id="cGoal" title="Click to set your daily word goal">
+    <div class="chip goal" id="cGoal" title="Click to set your daily character goal">
       <div class="ring" id="ring"><b id="todayWords" style="position:absolute">0</b></div>
       <span>today / <i id="goalNum">500</i></span>
     </div>
@@ -353,6 +353,7 @@ const TYPES = ["Character","Location","Faction","Lore","Timeline"];
 const $ = id => document.getElementById(id);
 const today = () => new Date().toISOString().slice(0,10);
 const wc = t => (t.trim().match(/\S+/g) || []).length;
+const totalChars = () => { const p=P(); return p.chapters.reduce((n,c)=>n+c.body.length,0) + (p.blindSegments||[]).reduce((n,s)=>n+s.text.length,0) + (p.blindDraft||"").length; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
 /* ---- contenteditable helpers --------------------------------------- */
@@ -522,7 +523,7 @@ const blindWc = p => (p.blindSegments||[]).reduce((n,s)=>n+wc(s.text),0) + wc(p.
 const totalWords = () => { const p=P(); return p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p); };
 const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p);
 mtitle.value = P().name; setDraftText(cur().body); chTitle.value = cur().title;
-S.lastCount = totalWords();
+S.lastCount = totalChars();
 
 function onWrite(){
   if(S.dead) return;                                 // game over until revived
@@ -530,7 +531,7 @@ function onWrite(){
   if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
   if(P().blindMode){ P().blindDraft = getDraftText(); if(!P().blindDay) P().blindDay = today(); }
   else cur().body = getDraftText();
-  const t = totalWords();
+  const t = totalChars();
   if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
   S.lastCount = t;
   if(t > 0) S.started = true;                        // the stakes are now live
@@ -577,7 +578,7 @@ function loadProject(){
     $("chTitle").style.display = "";
     draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   }
-  S.lastCount = totalWords();
+  S.lastCount = totalChars();
   peeking = false; $("bPeek").textContent = "👁 Peek";
   applyInvisibleUI();
   renderProjects(); renderChapters(); renderCodex(); renderStats(); save();
@@ -623,7 +624,7 @@ function toggleBlind(id){
       $("chTitle").style.display = "";
       draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
     }
-    S.lastCount = totalWords();
+    S.lastCount = totalChars();
     renderChapters(); renderStats();
     draft.focus();
   }
@@ -681,7 +682,7 @@ function revealAllInk(){
 function checkPhase(){
   const prev = S.phase;
   if(prev < 1 && S.lastCount > 0) S.phase = 1;
-  if(prev < 2 && S.todayWords >= S.goal){ S.phase = 2; revealAllInk(); toast("500 words. The ink is yours."); }
+  if(prev < 2 && S.todayWords >= S.goal){ S.phase = 2; revealAllInk(); toast("500 characters. The ink is yours."); }
   if(prev < 3 && (S.streak >= 2 || S.lastCount > 1000)) S.phase = 3;
   if(S.phase !== prev){ applyPhase(); save(); }
 }
@@ -747,7 +748,7 @@ function delChapter(id){
   P().chapters = P().chapters.filter(x=>x.id!==id);
   if(P().currentId===id) P().currentId = P().chapters[0].id;
   setDraftText(cur().body); chTitle.value = cur().title;
-  S.lastCount = totalWords();               // total shrank — resync so future typing counts right
+  S.lastCount = totalChars();               // total shrank — resync so future typing counts right
   renderChapters(); renderStats(); save();
 }
 $("chAdd").onclick = addChapter;
@@ -785,7 +786,7 @@ $("reviveBtn").onclick = ()=>{
 
 /* set goal */
 $("cGoal").onclick = ()=>{
-  const v = prompt("Daily word goal:", S.goal);
+  const v = prompt("Daily character goal:", S.goal);
   if(v && +v>0){ S.goal = Math.round(+v); renderStats(); save(); }
 };
 
@@ -1026,7 +1027,7 @@ function applyState(s){
     setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
   }
-  S.lastCount = totalWords();
+  S.lastCount = totalChars();
   rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); applyInvisibleUI(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
 }
