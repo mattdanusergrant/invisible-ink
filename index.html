@@ -412,7 +412,7 @@ function wrapLastChar(){
   sel.removeAllRanges(); sel.addRange(r);
   // schedule fade
   setTimeout(()=>{
-    if(span.isConnected){ span.style.transition="opacity 0.8s ease"; span.style.opacity="0"; }
+    if(span.isConnected && S.invisible){ span.style.transition="opacity 0.8s ease"; span.style.opacity="0"; }
   }, 5000);
 }
 
@@ -759,7 +759,7 @@ function renderStats(){
   $("goalNum").textContent = S.goal;
   $("total").textContent = S.lastCount.toLocaleString();
   $("streak").textContent = liveStreak();
-  $("counts").textContent = `${S.lastCount.toLocaleString()} words` +
+  $("counts").textContent = `${S.lastCount.toLocaleString()} chars` +
     (S.todayWords ? ` · ${S.todayWords} today` : "");
   const p = Math.min(100, Math.round(S.todayWords / S.goal * 100));
   $("ring").style.setProperty("--p", p);
