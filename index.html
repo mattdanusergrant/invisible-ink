@@ -34,7 +34,7 @@
     box-shadow:var(--shadow);flex:none;z-index:5;
   }
   .brand{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.12em;
-    color:var(--accent);white-space:nowrap;text-transform:uppercase}
+    color:var(--accent);white-space:nowrap;text-transform:uppercase;text-align:center}
   .brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.05em;text-transform:none}
   #mtitle{
     font-family:var(--serif);font-size:16px;border:none;background:transparent;color:var(--ink);
@@ -259,7 +259,7 @@
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 words</span>
     </div>
-    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="The first sentence is the hardest. Write it badly — you can fix it later. Just begin…"></div>
+    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="You can't delete. You can't edit. Just keep writing."></div>
   </section>
 
   <aside id="codex">
@@ -539,6 +539,9 @@ function onWrite(){
   checkPhase();
   renderStats(); renderChapters(); save();
 }
+draft.addEventListener("beforeinput", e=>{
+  if(S.phase < 2 && e.inputType.startsWith("delete")) e.preventDefault();
+});
 draft.addEventListener("input", e=>{
   if(S.invisible && e.inputType==="insertText" && e.data) wrapLastChar();
   onWrite();
@@ -572,7 +575,7 @@ function loadProject(){
   } else {
     setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
-    draft.dataset.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+    draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   }
   S.lastCount = totalWords();
   peeking = false; $("bPeek").textContent = "👁 Peek";
@@ -618,7 +621,7 @@ function toggleBlind(id){
       p.blindDraft = getDraftText();                // stash the blind draft
       setDraftText(cur().body); chTitle.value = cur().title;
       $("chTitle").style.display = "";
-      draft.dataset.placeholder = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
+      draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
     }
     S.lastCount = totalWords();
     renderChapters(); renderStats();
@@ -656,8 +659,11 @@ $("bPeek").onclick = ()=>{
 };
 
 /* ---- progressive unlock --------------------------------------------- */
+const FLOW_PLACEHOLDER = "You can't delete. You can't edit. Just keep writing.";
+const FREE_PLACEHOLDER = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
 function applyPhase(){
   document.body.dataset.phase = S.phase;
+  if(!P().blindMode) draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   renderMinCounter();
 }
 function renderMinCounter(){
