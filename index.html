@@ -927,7 +927,7 @@ $("bFocus").onclick = ()=>document.body.classList.toggle("focus");
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.body.classList.remove("focus"); });
 function applyTheme(t){ document.documentElement.dataset.theme=t; $("bTheme").textContent = t==="night"?"☀":"☾"; localStorage.setItem(THEME_KEY,t); }
 $("bTheme").onclick = ()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
-applyTheme(localStorage.getItem(THEME_KEY) || "day");
+applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? "night" : "day"));
 
 /* ---- export / backup / restore ------------------------------------- */
 function dl(name, text, mime){
