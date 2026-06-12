@@ -162,9 +162,18 @@
     color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums;
     transition:opacity .6s;
   }
-  /* phases 0 and 1: hide everything except the writing area */
-  body[data-phase="0"] header,
-  body[data-phase="1"] header  { display:none }
+  /* phases 0 and 1: minimal header — brand + peek + theme only */
+  body[data-phase="0"] #mtitle,
+  body[data-phase="1"] #mtitle { display:none }
+  body[data-phase="0"] .chips,
+  body[data-phase="1"] .chips  { display:none }
+  body[data-phase="0"] #bChapters, body[data-phase="1"] #bChapters,
+  body[data-phase="0"] #bSprint,   body[data-phase="1"] #bSprint,
+  body[data-phase="0"] #bInvisible,body[data-phase="1"] #bInvisible,
+  body[data-phase="0"] #bFocus,    body[data-phase="1"] #bFocus,
+  body[data-phase="0"] #bExport,   body[data-phase="1"] #bExport,
+  body[data-phase="0"] #bCloud,    body[data-phase="1"] #bCloud,
+  body[data-phase="0"] #bCodex,    body[data-phase="1"] #bCodex { display:none }
   body[data-phase="0"] .chapters,
   body[data-phase="1"] .chapters { display:none }
   body[data-phase="0"] aside,
@@ -173,16 +182,11 @@
   body[data-phase="1"] #peril  { display:none !important }
   body[data-phase="0"] #chTitle,
   body[data-phase="1"] #chTitle { display:none }
-  /* phase 0: hide toolbar entirely */
+  /* phase 0: hide editor toolbar entirely */
   body[data-phase="0"] .etools { display:none }
-  /* phase 1: toolbar visible but only Peek + word count */
+  /* phase 1: editor toolbar visible but only word count */
   body[data-phase="1"] #bJump,
   body[data-phase="1"] #bSel  { display:none !important }
-  /* phases 0+1: float theme toggle to bottom-left corner */
-  body[data-phase="0"] #bTheme,
-  body[data-phase="1"] #bTheme {
-    position:fixed;bottom:24px;left:28px;z-index:10;
-  }
   /* phases 0 and 1: give the blank page breathing room */
   body[data-phase="0"] #draft,
   body[data-phase="1"] #draft { padding-top:clamp(60px,18vh,140px) }
@@ -227,6 +231,7 @@
     <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
     <button class="tbtn" id="bInvisible" title="Invisible ink — each letter fades 5 s after you type it; everything stays">Invisible</button>
     <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
+    <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none">👁 Peek</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
     <button class="tbtn" id="bExport" title="Export & backup">↓</button>
     <button class="tbtn" id="bCloud" title="Account & sync">☁</button>
@@ -251,7 +256,6 @@
     <input id="chTitle" class="chtitle" placeholder="Chapter title" />
     <div class="etools">
       <button class="tbtn" id="bJump" title="Caret is on a codex name — jump to its entry" style="display:none;padding:4px 9px;font-size:12px">📖 <span id="jumpName"></span></button>
-      <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none;padding:4px 9px;font-size:12px">👁 Peek</button>
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 words</span>
     </div>
