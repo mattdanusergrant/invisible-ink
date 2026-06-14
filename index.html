@@ -156,52 +156,55 @@
   /* ---- invisible ink -------------------------------------------------- */
   #draft{caret-color:var(--accent)}
   .ink-char{transition:opacity 0.8s ease}
-  /* ---- progressive unlock -------------------------------------------- */
+  /* ---- progressive unlock --------------------------------------------
+     One zone reveals per ~20% of the daily goal typed today (≈ every 100
+     chars at the default 500). Hidden zones keep their place in the layout
+     (visibility, not display) so the writing column stays a constant width
+     and the draft never jumps as features arrive.
+       phase 0  <20%   blank page · brand · peek · theme · floating counter
+       phase 1  20%    + chapter title + full top bar (chips & tools)
+       phase 2  40%    + left rail (Chapters)
+       phase 3  60%    + editor toolbar (Selection → Codex)
+       phase 4  80%    + codex panel (right)
+       phase 5  goal   + projects rail · WIP name · ink revealed · free edit */
   #minCounter{
     position:fixed;bottom:24px;right:28px;font-size:13px;letter-spacing:.03em;
     color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums;
     transition:opacity .6s;
   }
-  /* phases 0 and 1: minimal header — brand + peek + theme only */
-  body[data-phase="0"] #mtitle,
-  body[data-phase="1"] #mtitle { display:none }
-  body[data-phase="0"] .chips,
-  body[data-phase="1"] .chips  { display:none }
-  body[data-phase="0"] #bChapters, body[data-phase="1"] #bChapters,
-  body[data-phase="0"] #bSprint,   body[data-phase="1"] #bSprint,
-  body[data-phase="0"] #bInvisible,body[data-phase="1"] #bInvisible,
-  body[data-phase="0"] #bFocus,    body[data-phase="1"] #bFocus,
-  body[data-phase="0"] #bExport,   body[data-phase="1"] #bExport,
-  body[data-phase="0"] #bCloud,    body[data-phase="1"] #bCloud,
-  body[data-phase="0"] #bCodex,    body[data-phase="1"] #bCodex { display:none }
+  /* side rails reserve their width from the start, reveal on cue */
   body[data-phase="0"] .chapters,
-  body[data-phase="1"] .chapters { display:none }
+  body[data-phase="1"] .chapters{ visibility:hidden }
   body[data-phase="0"] aside,
-  body[data-phase="1"] aside   { display:none }
-  body[data-phase="0"] #peril,
-  body[data-phase="1"] #peril  { display:none !important }
-  body[data-phase="0"] #chTitle,
-  body[data-phase="1"] #chTitle { display:none }
-  /* phase 0: hide editor toolbar entirely */
-  body[data-phase="0"] .etools { display:none }
-  /* phase 1: editor toolbar visible but only word count */
-  body[data-phase="1"] #bJump,
-  body[data-phase="1"] #bSel  { display:none !important }
-  /* phases 0 and 1: give the blank page breathing room */
-  body[data-phase="0"] #draft,
-  body[data-phase="1"] #draft { padding-top:clamp(60px,18vh,140px) }
-  /* phase 2+: hide the floating counter */
-  body[data-phase="2"] #minCounter,
-  body[data-phase="3"] #minCounter { display:none }
-  /* phase 2: advanced chips and nav hidden until day 2 */
-  body[data-phase="2"] #cLives,
-  body[data-phase="2"] #cStreak,
-  body[data-phase="2"] #cTotal   { display:none }
-  body[data-phase="2"] #mtitle,
-  body[data-phase="2"] #bChapters,
-  body[data-phase="2"] #bExport,
-  body[data-phase="2"] #bCloud,
-  body[data-phase="2"] #bCodex   { display:none }
+  body[data-phase="1"] aside,
+  body[data-phase="2"] aside,
+  body[data-phase="3"] aside{ visibility:hidden }
+  /* chapter title + editor toolbar reserve their height, reveal on cue */
+  body[data-phase="0"] #chTitle{ visibility:hidden }
+  body[data-phase="0"] .etools,
+  body[data-phase="1"] .etools,
+  body[data-phase="2"] .etools{ visibility:hidden }
+  /* header: brand · peek · theme are always present; the rest lands at 20% */
+  body[data-phase="0"] .chips,
+  body[data-phase="0"] #bSprint,
+  body[data-phase="0"] #bInvisible,
+  body[data-phase="0"] #bFocus,
+  body[data-phase="0"] #bExport,
+  body[data-phase="0"] #bCloud{ visibility:hidden }
+  /* a nav button never shows before the zone it opens */
+  body[data-phase="0"] #bChapters,
+  body[data-phase="1"] #bChapters{ visibility:hidden }
+  body[data-phase="0"] #bCodex,
+  body[data-phase="1"] #bCodex,
+  body[data-phase="2"] #bCodex,
+  body[data-phase="3"] #bCodex{ visibility:hidden }
+  /* WIP name + projects rail arrive together at the full unlock */
+  body:not([data-phase="5"]) #mtitle{ visibility:hidden }
+  body:not([data-phase="5"]) #prSection{ display:none }
+  /* survival warning waits until its chips are on screen */
+  body[data-phase="0"] #peril{ display:none !important }
+  /* the floating counter retires once the goal lands */
+  body[data-phase="5"] #minCounter{ display:none }
   @media (max-width:760px){
     aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
       transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
@@ -244,9 +247,11 @@
 
 <main>
   <nav class="chapters" id="chapters">
+    <div id="prSection">
     <div class="chhead"><span>Projects</span>
       <button class="tbtn" id="prAdd" title="Start a new WIP" style="padding:3px 10px">＋</button></div>
     <div class="chlist" id="prlist" style="flex:none;max-height:34%"></div>
+    </div>
     <div class="chhead"><span>Chapters</span>
       <button class="tbtn" id="chAdd" title="Add chapter" style="padding:3px 10px">＋</button></div>
     <div class="chlist" id="chlist"></div>
@@ -428,7 +433,7 @@ const fresh = () => { const p = freshProject(); return {
   streak:0, lastGoalDay:"",                 // streak bookkeeping
   lives:MAX_LIVES, started:false, dead:false,  // survival layer
   sprints:[],
-  phase: 0,                                  // progressive feature unlock (0–3)
+  phase: 0, phaseV: 2,                       // progressive feature unlock (0–5)
   invisible: true,                           // global invisible-ink mode
   projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
@@ -455,12 +460,14 @@ function normalize(s){
   if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
   if(typeof st.lives !== "number") st.lives = MAX_LIVES;
   if(typeof st.invisible !== "boolean") st.invisible = true;
-  if(typeof st.phase !== "number"){
-    // migrate existing users straight to the right phase
-    if(st.streak >= 2 || (st.lastCount||0) > 1000) st.phase = 3;
-    else if(st.lastGoalDay) st.phase = 2;
-    else if((st.lastCount||0) > 0) st.phase = 1;
+  // progressive-unlock phases (v2): 0 = blank page → 5 = fully unlocked.
+  // Migrate brand-new saves and the earlier 0–3 scheme onto this scale.
+  if(s.phaseV !== 2){
+    if((typeof st.phase === "number" && st.phase >= 2) || st.streak >= 2 ||
+       (st.lastCount||0) > 1000 || st.lastGoalDay) st.phase = 5;   // already past the goal
+    else if((st.lastCount||0) > 0 || st.phase === 1) st.phase = 1;
     else st.phase = 0;
+    st.phaseV = 2;
   }
   st.started = !!st.started || st.projects.some(p=>p.chapters.some(c=>wc(c.body)>0));   // stakes begin once you've written
   delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
@@ -541,7 +548,7 @@ function onWrite(){
   renderStats(); renderChapters(); save();
 }
 draft.addEventListener("beforeinput", e=>{
-  if(S.phase < 2 && e.inputType.startsWith("delete")) e.preventDefault();
+  if(S.phase < 5 && e.inputType.startsWith("delete")) e.preventDefault();
 });
 draft.addEventListener("input", e=>{
   if(S.invisible && e.inputType==="insertText" && e.data) wrapLastChar();
@@ -576,7 +583,7 @@ function loadProject(){
   } else {
     setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
-    draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+    draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   }
   S.lastCount = totalChars();
   peeking = false; $("bPeek").textContent = "👁 Peek";
@@ -622,7 +629,7 @@ function toggleBlind(id){
       p.blindDraft = getDraftText();                // stash the blind draft
       setDraftText(cur().body); chTitle.value = cur().title;
       $("chTitle").style.display = "";
-      draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+      draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
     }
     S.lastCount = totalChars();
     renderChapters(); renderStats();
@@ -664,7 +671,7 @@ const FLOW_PLACEHOLDER = "You can't delete. You can't edit. Just keep writing.";
 const FREE_PLACEHOLDER = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
 function applyPhase(){
   document.body.dataset.phase = S.phase;
-  if(!P().blindMode) draft.dataset.placeholder = S.phase < 2 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+  if(!P().blindMode) draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   renderMinCounter();
 }
 function renderMinCounter(){
@@ -681,10 +688,18 @@ function revealAllInk(){
 }
 function checkPhase(){
   const prev = S.phase;
-  if(prev < 1 && S.lastCount > 0) S.phase = 1;
-  if(prev < 2 && S.todayWords >= S.goal){ S.phase = 2; revealAllInk(); toast("500 characters. The ink is yours."); }
-  if(prev < 3 && (S.streak >= 2 || S.lastCount > 1000)) S.phase = 3;
-  if(S.phase !== prev){ applyPhase(); save(); }
+  const c = S.todayWords, g = S.goal || 500;   // today's characters drive the unlock
+  let target = prev;                            // phases only ever advance
+  if(c >= g*0.2) target = Math.max(target, 1);
+  if(c >= g*0.4) target = Math.max(target, 2);
+  if(c >= g*0.6) target = Math.max(target, 3);
+  if(c >= g*0.8) target = Math.max(target, 4);
+  if(c >= g)     target = Math.max(target, 5);
+  if(target !== prev){
+    S.phase = target;
+    if(target >= 5 && prev < 5){ revealAllInk(); toast(g + " characters. The ink is yours."); }
+    applyPhase(); save();
+  }
 }
 
 /* ---- chapters ------------------------------------------------------- */
