@@ -315,7 +315,7 @@
   <div class="card" id="sprintRun" style="display:none">
     <h2 id="runTitle">Sprint</h2>
     <div class="clock" id="clock">25:00</div>
-    <div class="sub"><b id="runWords">0</b> words written</div>
+    <div class="sub"><b id="runWords">0</b> characters written</div>
     <button class="tbtn" id="sEnd" style="width:100%;padding:11px">End sprint</button>
   </div>
 </div>
@@ -343,10 +343,13 @@
 
 <script>
 "use strict";
-/* Write or Die — a single-file writing studio: productivity (goals, sprints,
-   streaks) + a worldbuilding codex, with a survival layer (miss your daily goal
-   and you lose a life; hit zero and the story dies). Vanilla JS, no deps,
-   localStorage save. #LLM-generated */
+/* Invisible Ink — a single-file writing studio: productivity (daily character
+   goal, sprints, streaks) + a worldbuilding codex, with a survival layer (miss
+   your daily goal and you lose a life; hit zero and the story dies) and an
+   invisible-ink flow mode where each letter fades 5 s after you type it. The UI
+   unlocks progressively as you hit the day's goal. Vanilla JS, no deps,
+   localStorage save. Storage keys keep the project's original "writeordie.*"
+   prefix so existing saves survive the rename. #LLM-generated */
 
 const KEY = "writeordie.v1", THEME_KEY = "writeordie.theme", MAX_LIVES = 3;
 // one-time migration from the project's former name ("Loomwright")
@@ -601,7 +604,8 @@ function switchProject(id){
 function addProject(){
   const name = prompt("Name your new WIP:", "");
   if(name === null) return;
-  cur().body = getDraftText();
+  if(P().blindMode) P().blindDraft = getDraftText();   // don't clobber a chapter with the blind draft
+  else cur().body = getDraftText();
   const p = freshProject(name.trim());
   S.projects.push(p); S.projectId = p.id;
   loadProject(); draft.focus();
@@ -790,7 +794,7 @@ function renderStats(){
 function renderDeath(){
   $("ovDead").classList.toggle("on", !!S.dead);
   if(S.dead) $("deadStats").innerHTML =
-    `<b>${S.lastCount.toLocaleString()}</b> words written before the silence.`;
+    `<b>${S.lastCount.toLocaleString()}</b> characters written before the silence.`;
 }
 $("reviveBtn").onclick = ()=>{
   S.dead = false; S.lives = MAX_LIVES; S.streak = 0; S.lastGoalDay = "";
@@ -905,7 +909,7 @@ function renderHist(){
   const h = S.sprints.slice(-6).reverse();
   $("ghist").innerHTML = h.length
     ? "<div style='border:none;color:var(--accent);font-weight:600'>recent sprints</div>"+
-      h.map(s=>`<div><span>${s.date.slice(5)} · ${s.dur}m</span><span>${s.words}w · ${s.wpm} wpm</span></div>`).join("")
+      h.map(s=>`<div><span>${s.date.slice(5)} · ${s.dur}m</span><span>${s.words} chars · ${s.wpm} cpm</span></div>`).join("")
     : "";
 }
 $("bSprint").onclick = ()=>{ $("sprintSetup").style.display=""; $("sprintRun").style.display="none"; buildDurs(); renderHist(); $("ovSprint").classList.add("on"); };
@@ -929,13 +933,13 @@ $("sEnd").onclick = ()=>endSprint(false);
 function endSprint(complete){
   clearInterval(sTimer);
   $("bSprint").textContent = "⏱ Sprint";
-  const words = Math.max(0, S.todayWords - sprint.startWords);
-  const wpm = Math.round(words / sprint.dur);
+  const words = Math.max(0, S.todayWords - sprint.startWords);   // characters typed this sprint
+  const wpm = Math.round(words / sprint.dur);                    // characters per minute
   S.sprints.push({date:today(), dur:sprint.dur, words, wpm});
   if(S.sprints.length>40) S.sprints = S.sprints.slice(-40);
   sprint.active=false; save();
   $("ovSprint").classList.remove("on");
-  toast(complete ? `⏱ Time! ${words} words at ${wpm} wpm. Beautiful.` : `Sprint ended — ${words} words. Every one counts.`);
+  toast(complete ? `⏱ Time! ${words} characters at ${wpm} cpm. Beautiful.` : `Sprint ended — ${words} characters. Every one counts.`);
 }
 
 /* ---- focus / theme -------------------------------------------------- */
@@ -1043,7 +1047,7 @@ function applyState(s){
     $("chTitle").style.display = "";
   }
   S.lastCount = totalChars();
-  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); applyInvisibleUI(); save();
+  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); applyInvisibleUI(); applyPhase(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
 }
 function renderCloud(){
