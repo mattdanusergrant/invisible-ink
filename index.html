@@ -9,7 +9,6 @@
   :root{
     --bg:#ffffff; --panel:#ffffff; --ink:#000000; --muted:#999999;
     --line:#e0e0e0; --accent:#000000; --accent-soft:#f2f2f2; --good:#000000;
-    --danger:#000000; --danger-soft:rgba(0,0,0,0.12);
     --shadow:0 1px 2px rgba(0,0,0,0.05),0 4px 16px rgba(0,0,0,0.07);
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
     --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -17,7 +16,6 @@
   :root[data-theme="night"]{
     --bg:#000000; --panel:#000000; --ink:#ffffff; --muted:#777777;
     --line:#222222; --accent:#ffffff; --accent-soft:#111111; --good:#ffffff;
-    --danger:#ffffff; --danger-soft:rgba(255,255,255,0.12);
     --shadow:0 1px 2px rgba(0,0,0,0.5),0 4px 16px rgba(0,0,0,0.6);
   }
   *{box-sizing:border-box}
@@ -41,17 +39,6 @@
     padding:6px 8px;border-radius:8px;min-width:120px;flex:1 1 auto;
   }
   #mtitle:focus{outline:none;background:var(--bg)}
-  .chips{display:flex;gap:8px;align-items:center}
-  .chip{display:flex;flex-direction:column;align-items:center;background:var(--bg);
-    border:1px solid var(--line);border-radius:10px;padding:5px 11px;line-height:1.15;min-width:62px}
-  .chip b{font-size:15px;font-variant-numeric:tabular-nums}
-  .chip span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .chip.goal{position:relative}
-  .chip.goal.met b{color:var(--good)}
-  .ring{--p:0;width:30px;height:30px;border-radius:50%;
-    background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--line) 0);
-    display:grid;place-items:center}
-  .ring::after{content:"";width:22px;height:22px;border-radius:50%;background:var(--bg)}
   .tools{display:flex;gap:6px;margin-left:auto}
   .tbtn{background:var(--bg);border:1px solid var(--line);color:var(--ink);
     border-radius:9px;padding:7px 11px;font-size:13px;white-space:nowrap}
@@ -117,10 +104,6 @@
   .ced textarea{flex:1;min-height:160px;resize:vertical;font-family:var(--serif);font-size:15px;line-height:1.6}
   .ced .row{display:flex;gap:8px}.ced .row>*{flex:1}
   .ced .nm{font-family:var(--serif);font-size:18px}
-  /* ---- focus mode ----------------------------------------------------- */
-  body.focus header .chips,body.focus header .brand small,body.focus .etools,
-  body.focus aside,body.focus .chapters,body.focus .chtitle{display:none}
-  body.focus #draft{padding-top:8vh}
   /* ---- overlay / sprint ---------------------------------------------- */
   .ov{position:fixed;inset:0;background:rgba(20,14,8,.45);display:none;
     align-items:center;justify-content:center;z-index:20}
@@ -138,16 +121,6 @@
   .sub b{color:var(--ink);font-size:18px}
   .ghist{font-size:12px;color:var(--muted);margin-top:14px;text-align:left;max-height:120px;overflow:auto}
   .ghist div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line)}
-  /* ---- lives / peril / death ----------------------------------------- */
-  .chip.lives b{letter-spacing:1px;color:var(--accent)}
-  .chip.lives.danger{border-color:var(--danger);animation:pulse 1.3s ease-in-out infinite}
-  .chip.lives.danger b{color:var(--danger)}
-  @keyframes pulse{50%{box-shadow:0 0 0 3px var(--danger-soft)}}
-  #peril{flex:none;background:var(--danger);color:#fff;text-align:center;
-    padding:7px 14px;font-size:13px;font-weight:600;letter-spacing:.2px;z-index:6}
-  body.focus #peril{display:none !important}
-  .card.dead .skull{font-size:60px;line-height:1;margin-bottom:6px}
-  .card.dead h2{color:var(--danger)}
   /* ---- toast ---------------------------------------------------------- */
   #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,40px);
     background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;font-size:14px;
@@ -156,84 +129,68 @@
   /* ---- invisible ink -------------------------------------------------- */
   #draft{caret-color:var(--accent)}
   .ink-char{transition:opacity 0.8s ease}
-  /* ---- progressive unlock --------------------------------------------
-     One zone reveals per ~20% of the daily goal typed today (≈ every 100
-     chars at the default 500). Hidden zones keep their place in the layout
-     (visibility, not display) so the writing column stays a constant width
-     and the draft never jumps as features arrive.
-       phase 0  <20%   blank page · brand · peek · theme · floating counter
-       phase 1  20%    + chapter title + full top bar (chips & tools)
-       phase 2  40%    + left rail (Chapters)
-       phase 3  60%    + editor toolbar (Selection → Codex)
-       phase 4  80%    + codex panel (right)
-       phase 5  goal   + projects rail · WIP name · ink revealed · free edit */
+  /* ---- floating counter ----------------------------------------------- */
   #minCounter{
     position:fixed;bottom:24px;right:28px;font-size:13px;letter-spacing:.03em;
-    color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums;
-    transition:opacity .6s;
+    color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer;
+    transition:opacity .6s;z-index:4;
   }
-  /* side rails reserve their width from the start, reveal on cue */
-  body[data-phase="0"] .chapters,
-  body[data-phase="1"] .chapters{ visibility:hidden }
-  body[data-phase="0"] aside,
-  body[data-phase="1"] aside,
-  body[data-phase="2"] aside,
-  body[data-phase="3"] aside{ visibility:hidden }
-  /* chapter title + editor toolbar reserve their height, reveal on cue */
-  body[data-phase="0"] #chTitle{ visibility:hidden }
-  body[data-phase="0"] .etools,
-  body[data-phase="1"] .etools,
-  body[data-phase="2"] .etools{ visibility:hidden }
-  /* header: brand · peek · theme are always present; the rest lands at 20% */
-  body[data-phase="0"] .chips,
-  body[data-phase="0"] #bSprint,
-  body[data-phase="0"] #bInvisible,
-  body[data-phase="0"] #bFocus,
-  body[data-phase="0"] #bExport,
-  body[data-phase="0"] #bCloud{ visibility:hidden }
-  /* a nav button never shows before the zone it opens */
-  body[data-phase="0"] #bChapters,
-  body[data-phase="1"] #bChapters{ visibility:hidden }
-  body[data-phase="0"] #bCodex,
-  body[data-phase="1"] #bCodex,
-  body[data-phase="2"] #bCodex,
-  body[data-phase="3"] #bCodex{ visibility:hidden }
-  /* WIP name + projects rail arrive together at the full unlock */
-  body:not([data-phase="5"]) #mtitle{ visibility:hidden }
-  body:not([data-phase="5"]) #prSection{ display:none }
-  /* survival warning waits until its chips are on screen */
-  body[data-phase="0"] #peril{ display:none !important }
-  /* the floating counter retires once the goal lands */
-  body[data-phase="5"] #minCounter{ display:none }
+  /* ---- flow vs. pause -------------------------------------------------
+     The page is a blank sheet. While you type (body.flowing) every piece of
+     chrome fades away; when you pause it returns. Nothing competes with the
+     sentence you're writing. */
+  header,.etools,.chtitle,.chapters,aside,#minCounter{transition:opacity .5s ease}
+  body.flowing header,
+  body.flowing .etools,
+  body.flowing .chtitle,
+  body.flowing .chapters,
+  body.flowing aside{opacity:0;pointer-events:none}
+  body.flowing #minCounter{opacity:.18}
+  body.revealed #minCounter{display:none}
+  /* ---- just-in-time disclosure ----------------------------------------
+     A tool does not exist until the moment a real gesture calls for it, and
+     once revealed it stays (sticky). Writers who only write keep a blank page
+     forever; the UI grows only toward what this person actually does.
+       has-chapters : a 2nd chapter exists       → rail + chapter titles
+       has-codex    : a codex entry was saved    → codex panel + buttons
+       has-projects : a 2nd WIP exists           → projects rail + WIP name
+       has-export   : a session has ended        → export / backup
+       has-sync     : returned on a later day    → cloud sync
+       sel          : text is selected right now → Selection → Codex */
+  .chapters,aside{display:none}
+  #prSection,#mtitle,.chtitle{display:none}
+  #bChapters,#bCodex,#bExport,#bCloud,#bSel{display:none}
+  body.has-chapters .chapters{display:flex}
+  body.has-chapters .chtitle{display:block}
+  body.has-codex aside{display:flex}
+  body.has-projects #prSection{display:block}
+  body.has-projects #mtitle,
+  body.has-export #mtitle{display:block}
+  body.has-chapters #bChapters,
+  body.has-codex #bCodex,
+  body.has-export #bExport,
+  body.has-sync #bCloud{display:inline-block}
+  body.has-codex #bSel,
+  body.sel #bSel{display:inline-block}
   @media (max-width:760px){
     aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
       transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
-    aside.open{transform:translateX(0)}
+    body.has-codex aside.open{transform:translateX(0)}
     .chapters{position:fixed;left:0;top:0;bottom:0;width:min(280px,80vw);z-index:15;
       transform:translateX(-100%);transition:.25s;box-shadow:var(--shadow)}
-    .chapters.open{transform:translateX(0)}
-    .brand small{display:none}.chip{min-width:50px;padding:4px 8px}
+    body.has-chapters .chapters.open{transform:translateX(0)}
+    .brand small{display:none}
   }
 </style>
 </head>
-<body data-phase="0">
+<body>
 <header>
   <div class="brand">INVISIBLE INK<small>just keep writing</small></div>
   <input id="mtitle" placeholder="Name this WIP" />
-  <div class="chips">
-    <div class="chip lives" id="cLives" title="Lives — miss your daily goal and you lose one. Hit it to recover."><b id="lives">♥♥♥</b><span>lives</span></div>
-    <div class="chip goal" id="cGoal" title="Click to set your daily character goal">
-      <div class="ring" id="ring"><b id="todayWords" style="position:absolute">0</b></div>
-      <span>today / <i id="goalNum">500</i></span>
-    </div>
-    <div class="chip" id="cStreak"><b id="streak">0</b><span>🔥 streak</span></div>
-    <div class="chip" id="cTotal"><b id="total">0</b><span>total</span></div>
-  </div>
   <div class="tools">
     <button class="tbtn" id="bChapters" title="Chapters">📑</button>
     <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
-    <button class="tbtn" id="bInvisible" title="Invisible ink — each letter fades 5 s after you type it; everything stays">Invisible</button>
-    <button class="tbtn" id="bFocus" title="Distraction-free (Esc to exit)">Focus</button>
+    <button class="tbtn" id="bInvisible" title="Invisible ink — each letter fades 10 s after you type it; everything stays">Invisible</button>
     <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none">👁 Peek</button>
     <button class="tbtn" id="bTheme" title="Day / night">☾</button>
     <button class="tbtn" id="bExport" title="Export &amp; backup">↓</button>
@@ -242,8 +199,7 @@
   </div>
 </header>
 
-<div id="peril" style="display:none">⚠ One life left — write today or the ink runs dry.</div>
-<div id="minCounter">0 / 500</div>
+<div id="minCounter" title="Click to set your daily goal">0 / 500</div>
 
 <main>
   <nav class="chapters" id="chapters">
@@ -264,7 +220,7 @@
       <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
       <span class="sp" id="counts">0 chars</span>
     </div>
-    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="You can't delete. You can't edit. Just keep writing."></div>
+    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="Just start writing. Each letter fades — the words stay."></div>
   </section>
 
   <aside id="codex">
@@ -290,18 +246,6 @@
     </div>
   </aside>
 </main>
-
-<!-- game over -->
-<div class="ov" id="ovDead">
-  <div class="card dead">
-    <div class="skull">☠</div>
-    <h2>The ink ran dry.</h2>
-    <p>Too many days without words. The ink dried up.</p>
-    <div class="sub" id="deadStats"></div>
-    <button class="tbtn primary" id="reviveBtn" style="width:100%;padding:11px">Begin a new life</button>
-    <p style="margin:14px 0 0;font-size:11.5px">Your manuscript is safe — every word you wrote is still here.</p>
-  </div>
-</div>
 
 <!-- sprint overlay -->
 <div class="ov" id="ovSprint">
@@ -343,15 +287,18 @@
 
 <script>
 "use strict";
-/* Invisible Ink — a single-file writing studio: productivity (daily character
-   goal, sprints, streaks) + a worldbuilding codex, with a survival layer (miss
-   your daily goal and you lose a life; hit zero and the story dies) and an
-   invisible-ink flow mode where each letter fades 5 s after you type it. The UI
-   unlocks progressively as you hit the day's goal. Vanilla JS, no deps,
+/* Invisible Ink — a single-file writing studio built around one idea: keep the
+   writer in flow. Each letter fades 10 s after you type it (the words always
+   stay); while you type, the page is a blank sheet. Tools appear only at the
+   moment a real gesture calls for them (just-in-time disclosure) and never get
+   in the way of the sentence. Worldbuilding codex, chapters, projects, sprints
+   and optional cloud sync are all revealed on demand. Vanilla JS, no deps,
    localStorage save. Storage keys keep the project's original "writeordie.*"
    prefix so existing saves survive the rename. #LLM-generated */
 
-const KEY = "writeordie.v1", THEME_KEY = "writeordie.theme", MAX_LIVES = 3;
+const KEY = "writeordie.v1", THEME_KEY = "writeordie.theme";
+const INK_MS = 10000;                 // a letter fades this long after you type it
+const FLOW_REARM_MS = 15000;          // sustained typing re-summons invisible ink
 // one-time migration from the project's former name ("Loomwright")
 if(!localStorage.getItem(KEY) && localStorage.getItem("loomwright.v1"))
   localStorage.setItem(KEY, localStorage.getItem("loomwright.v1"));
@@ -421,7 +368,7 @@ function wrapLastChar(){
   // schedule fade
   setTimeout(()=>{
     if(span.isConnected && S.invisible){ span.style.transition="opacity 0.8s ease"; span.style.opacity="0"; }
-  }, 5000);
+  }, INK_MS);
 }
 
 /* ---- state ---------------------------------------------------------- */
@@ -430,16 +377,21 @@ const freshProject = name => { const cid = uid(); return {
   chapters:[{id:cid, title:"Chapter 1", body:""}], currentId: cid, codex:[],
   blindMode:false, blindDraft:"", blindDay:"", blindSegments:[]
 };};
+const freshSeen = () => ({chapters:false, codex:false, projects:false, export:false, sync:false});
 const fresh = () => { const p = freshProject(); return {
   goal:500,
-  day:today(), todayWords:0, lastCount:0,   // words written today = additive deltas
-  streak:0, lastGoalDay:"",                 // streak bookkeeping
-  lives:MAX_LIVES, started:false, dead:false,  // survival layer
+  day:today(), todayWords:0, lastCount:0,   // characters written today = additive deltas
+  streak:0, lastGoalDay:"",                 // positive-only streak (no stakes)
   sprints:[],
-  phase: 0, phaseV: 2,                       // progressive feature unlock (0–5)
-  invisible: true,                           // global invisible-ink mode
+  invisible:true, inkManualOff:false, revealDay:"",  // invisible-ink mode
+  firstDay:today(),                         // for the "returned on a later day" cue
+  seen: freshSeen(),                        // sticky just-in-time disclosure flags
   projects:[p], projectId:p.id              // every WIP: own chapters + codex
 };};
+function totalCharsOf(st){
+  const p = st.projects.find(x=>x.id===st.projectId) || st.projects[0];
+  return p ? p.chapters.reduce((n,c)=>n+c.body.length,0) + (p.blindSegments||[]).reduce((n,s)=>n+s.text.length,0) + (p.blindDraft||"").length : 0;
+}
 // fold any loaded/restored object into the current shape
 // (migrates v1 single-body and v2 single-manuscript saves into one project)
 function normalize(s){
@@ -461,18 +413,23 @@ function normalize(s){
     if(!Array.isArray(p.blindSegments)) p.blindSegments = [];
   });
   if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
-  if(typeof st.lives !== "number") st.lives = MAX_LIVES;
   if(typeof st.invisible !== "boolean") st.invisible = true;
-  // progressive-unlock phases (v2): 0 = blank page → 5 = fully unlocked.
-  // Migrate brand-new saves and the earlier 0–3 scheme onto this scale.
-  if(s.phaseV !== 2){
-    if((typeof st.phase === "number" && st.phase >= 2) || st.streak >= 2 ||
-       (st.lastCount||0) > 1000 || st.lastGoalDay) st.phase = 5;   // already past the goal
-    else if((st.lastCount||0) > 0 || st.phase === 1) st.phase = 1;
-    else st.phase = 0;
-    st.phaseV = 2;
+  if(typeof st.inkManualOff !== "boolean") st.inkManualOff = false;
+  if(typeof st.revealDay !== "string") st.revealDay = "";
+  if(!st.firstDay) st.firstDay = st.day || today();
+  // just-in-time disclosure flags. Generous migration: anyone with real prior
+  // usage keeps every tool they already had — we only start minimal for brand
+  // new saves (and for the retired phase-based scheme).
+  st.seen = Object.assign(freshSeen(), s.seen || {});
+  if(s.seen === undefined){
+    const lc = st.projects.reduce((n,p)=>n + p.chapters.reduce((m,c)=>m+c.body.length,0), 0);
+    const established = lc>0 || st.streak>0 || st.projects.length>1 ||
+      st.projects.some(p=>p.codex.length) || st.projects.some(p=>p.chapters.length>1);
+    if(established) st.seen = {chapters:true, codex:true, projects:true, export:true, sync:true};
   }
-  st.started = !!st.started || st.projects.some(p=>p.chapters.some(c=>wc(c.body)>0));   // stakes begin once you've written
+  if(st.firstDay && st.firstDay !== today() && totalCharsOf(st) > 0) st.seen.sync = true;
+  // drop fields from the retired survival/phase systems and the v1/v2 shape
+  delete st.lives; delete st.dead; delete st.started; delete st.phase; delete st.phaseV;
   delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
   return st;
 }
@@ -484,20 +441,10 @@ function load(){
 let saveT;
 function save(){ clearTimeout(saveT); saveT = setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); schedulePush(); }
 
-/* ---- daily rollover + survival + streak ---------------------------- */
+/* ---- daily rollover + streak --------------------------------------- */
 function rollover(){
   if(S.day === today()) return;
-  // Days have passed. Tax every day that fell short of the goal: the just-ended
-  // tracked day (if it missed) plus every empty day skipped in between.
-  if(S.started){
-    const gap = dayDiff(S.day, today());
-    const misses = (gap - 1) + (S.todayWords >= S.goal ? 0 : 1);
-    if(misses > 0){
-      S.lives = Math.max(0, S.lives - misses);
-      if(S.lives === 0) S.dead = true;
-    }
-  }
-  // archive any blind drafts typed on the previous day
+  // archive any blind drafts typed on a previous day
   S.projects.forEach(p=>{
     if(p.blindMode && p.blindDraft && p.blindDay !== today()){
       p.blindSegments.push({day:p.blindDay||S.day, text:p.blindDraft});
@@ -508,6 +455,8 @@ function rollover(){
   // new day: today's count resets; lastCount stays at manuscript length so
   // continuing to type counts as new words, not a fresh dump.
   S.day = today(); S.todayWords = 0;
+  // coming back on a later day with work already done → cloud sync is worth offering
+  if(totalChars() > 0 && S.firstDay && S.firstDay !== today()) S.seen.sync = true;
 }
 function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
 function creditStreak(){
@@ -515,8 +464,6 @@ function creditStreak(){
   if(S.lastGoalDay && dayDiff(S.lastGoalDay,today())===1) S.streak++;  // consecutive
   else S.streak = 1;                               // first day / gap
   S.lastGoalDay = today();
-  S.lives = Math.min(MAX_LIVES, S.lives + 1);      // writing pulls you back from the brink
-  toast(`🔥 Goal met — ${S.streak}-day streak!`);
 }
 function liveStreak(){
   // display: a streak only counts if the last goal day was today or yesterday
@@ -530,30 +477,37 @@ const draft = $("draft"), mtitle = $("mtitle"), chTitle = $("chTitle");
 const P = () => S.projects.find(p=>p.id===S.projectId) || S.projects[0];
 const cur = () => P().chapters.find(c=>c.id===P().currentId) || P().chapters[0];
 const blindWc = p => (p.blindSegments||[]).reduce((n,s)=>n+wc(s.text),0) + wc(p.blindDraft||"");
-const totalWords = () => { const p=P(); return p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p); };
 const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p);
 mtitle.value = P().name; setDraftText(cur().body); chTitle.value = cur().title;
 S.lastCount = totalChars();
 
 function onWrite(){
-  if(S.dead) return;                                 // game over until revived
   rollover();
-  if(S.dead){ renderStats(); renderDeath(); save(); return; }  // midnight death while open
   if(P().blindMode){ P().blindDraft = getDraftText(); if(!P().blindDay) P().blindDay = today(); }
   else cur().body = getDraftText();
   const t = totalChars();
   if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
   S.lastCount = t;
-  if(t > 0) S.started = true;                        // the stakes are now live
   if(sprint.active) $("runWords").textContent = S.todayWords - sprint.startWords;
-  if(S.todayWords >= S.goal) creditStreak();
-  checkPhase();
+  // sustained flow re-summons invisible ink — unless you turned it off on purpose
+  if(!S.invisible && !S.inkManualOff && flowStart && Date.now()-flowStart >= FLOW_REARM_MS) reArmInk();
+  if(S.todayWords >= S.goal){
+    creditStreak();
+    if(S.revealDay !== today()){                  // the daily payoff, fired once
+      S.revealDay = today(); S.seen.export = true;
+      revealAllInk();
+      const st = liveStreak();
+      toast(`${S.goal} today — the ink is yours.` + (st>1 ? ` 🔥 ${st}-day streak.` : ""));
+    }
+  }
   renderStats(); renderChapters(); save();
 }
 draft.addEventListener("beforeinput", e=>{
-  if(S.phase < 5 && e.inputType.startsWith("delete")) e.preventDefault();
+  // invisible ink = pure forward flow: no deleting, no editing. Turn it off to edit.
+  if(S.invisible && e.inputType.startsWith("delete")) e.preventDefault();
 });
 draft.addEventListener("input", e=>{
+  onFlow();
   if(S.invisible && e.inputType==="insertText" && e.data) wrapLastChar();
   onWrite();
 });
@@ -586,7 +540,7 @@ function loadProject(){
   } else {
     setDraftText(cur().body); chTitle.value = cur().title;
     $("chTitle").style.display = "";
-    draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+    draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
   }
   S.lastCount = totalChars();
   peeking = false; $("bPeek").textContent = "👁 Peek";
@@ -608,6 +562,7 @@ function addProject(){
   else cur().body = getDraftText();
   const p = freshProject(name.trim());
   S.projects.push(p); S.projectId = p.id;
+  S.seen.projects = true;                               // a 2nd WIP: the projects rail is now yours
   loadProject(); draft.focus();
 }
 function delProject(id){
@@ -633,7 +588,7 @@ function toggleBlind(id){
       p.blindDraft = getDraftText();                // stash the blind draft
       setDraftText(cur().body); chTitle.value = cur().title;
       $("chTitle").style.display = "";
-      draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+      draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
     }
     S.lastCount = totalChars();
     renderChapters(); renderStats();
@@ -644,15 +599,19 @@ function toggleBlind(id){
 }
 
 /* ---- invisible ink -------------------------------------------------- */
+const FLOW_PLACEHOLDER = "Just start writing. Each letter fades — the words stay.";
+const FREE_PLACEHOLDER = "Edit freely. Turn Invisible back on whenever you want to fall into flow.";
 let peeking = false;
 function applyInvisibleUI(){
   $("bInvisible").classList.toggle("primary", S.invisible);
   $("bPeek").style.display = S.invisible ? "" : "none";
   if(!S.invisible){ peeking = false; $("bPeek").textContent = "👁 Peek"; }
+  if(!P().blindMode) draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
 }
 $("bInvisible").onclick = ()=>{
-  S.invisible = !S.invisible; applyInvisibleUI(); save();
-  toast(S.invisible ? "Invisible ink on — each letter fades after 5 s. Everything stays." : "Invisible ink off.");
+  S.invisible = !S.invisible; S.inkManualOff = !S.invisible;   // remember a deliberate choice
+  applyInvisibleUI(); save();
+  toast(S.invisible ? "Invisible ink on — each letter fades after 10 s. Everything stays." : "Invisible ink off — edit freely.");
 };
 $("bPeek").onclick = ()=>{
   peeking = !peeking;
@@ -663,48 +622,51 @@ $("bPeek").onclick = ()=>{
   } else {
     chars.forEach(s=>{
       const age = Date.now() - (+s.dataset.t||0);
-      s.style.transition = age>=5000 ? "none" : "";
-      s.style.opacity = age>=5000 ? "0" : "1";
+      s.style.transition = age>=INK_MS ? "none" : "";
+      s.style.opacity = age>=INK_MS ? "0" : "1";
     });
     $("bPeek").textContent = "👁 Peek";
   }
 };
-
-/* ---- progressive unlock --------------------------------------------- */
-const FLOW_PLACEHOLDER = "You can't delete. You can't edit. Just keep writing.";
-const FREE_PLACEHOLDER = "The first sentence is the hardest. Write it badly — you can fix it later. Just begin…";
-function applyPhase(){
-  document.body.dataset.phase = S.phase;
-  if(!P().blindMode) draft.dataset.placeholder = S.phase < 5 ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
-  renderMinCounter();
-}
-function renderMinCounter(){
-  const el = $("minCounter"); if(!el) return;
-  el.textContent = S.todayWords + " / " + S.goal;
-}
 function revealAllInk(){
   draft.querySelectorAll(".ink-char").forEach(s=>{
     s.style.transition = "opacity 1.2s ease";
     s.style.opacity = "1";
   });
-  S.invisible = false; applyInvisibleUI();
+  S.invisible = false; S.inkManualOff = false;   // revealed, but flow can re-arm it
+  applyInvisibleUI();
   setTimeout(()=>{ draft.querySelectorAll(".ink-char").forEach(s=>s.style.transition=""); }, 1300);
 }
-function checkPhase(){
-  const prev = S.phase;
-  const c = S.todayWords, g = S.goal || 500;   // today's characters drive the unlock
-  let target = prev;                            // phases only ever advance
-  if(c >= g*0.2) target = Math.max(target, 1);
-  if(c >= g*0.4) target = Math.max(target, 2);
-  if(c >= g*0.6) target = Math.max(target, 3);
-  if(c >= g*0.8) target = Math.max(target, 4);
-  if(c >= g)     target = Math.max(target, 5);
-  if(target !== prev){
-    S.phase = target;
-    if(target >= 5 && prev < 5){ revealAllInk(); toast(g + " characters. The ink is yours."); }
-    applyPhase(); save();
-  }
+function reArmInk(){
+  S.invisible = true; applyInvisibleUI(); save();
+  toast("Flowing — invisible ink back on.");
 }
+
+/* ---- flow state + just-in-time disclosure --------------------------- */
+let flowTimer = null, flowStart = 0;
+function onFlow(){
+  // entered/continued a typing burst — fade the chrome away
+  if(!flowStart) flowStart = Date.now();
+  document.body.classList.add("flowing");
+  clearTimeout(flowTimer);
+  flowTimer = setTimeout(()=>{ document.body.classList.remove("flowing"); flowStart = 0; }, 2000);
+}
+function applyDisclosure(){
+  const c = document.body.classList, p = P();
+  c.toggle("has-chapters", S.seen.chapters || p.chapters.length>1);
+  c.toggle("has-codex",    S.seen.codex);
+  c.toggle("has-projects", S.seen.projects || S.projects.length>1);
+  c.toggle("has-export",   S.seen.export);
+  c.toggle("has-sync",     S.seen.sync);
+  c.toggle("revealed",     S.revealDay===today());
+}
+function renderMinCounter(){
+  const el = $("minCounter"); if(el) el.textContent = S.todayWords + " / " + S.goal;
+}
+$("minCounter").onclick = ()=>{
+  const v = prompt("Daily character goal:", S.goal);
+  if(v && +v>0){ S.goal = Math.round(+v); renderStats(); save(); }
+};
 
 /* ---- chapters ------------------------------------------------------- */
 function renderChapters(){
@@ -749,6 +711,7 @@ function addChapter(){
   cur().body = getDraftText();
   const ch = {id:uid(), title:`Chapter ${P().chapters.length+1}`, body:""};
   P().chapters.push(ch); P().currentId = ch.id;
+  S.seen.chapters = true;                   // a 2nd chapter: the rail + titles are now yours
   setDraftText(""); chTitle.value = ch.title;
   if(window.innerWidth<=760) $("chapters").classList.remove("open");
   renderChapters(); renderStats(); save(); chTitle.focus();
@@ -774,40 +737,14 @@ $("chAdd").onclick = addChapter;
 $("bChapters").onclick = ()=>$("chapters").classList.toggle("open");
 
 function renderStats(){
-  $("todayWords").textContent = S.todayWords;
-  $("goalNum").textContent = S.goal;
-  $("total").textContent = S.lastCount.toLocaleString();
-  $("streak").textContent = liveStreak();
   $("counts").textContent = `${S.lastCount.toLocaleString()} chars` +
     (S.todayWords ? ` · ${S.todayWords} today` : "");
-  const p = Math.min(100, Math.round(S.todayWords / S.goal * 100));
-  $("ring").style.setProperty("--p", p);
-  $("cGoal").classList.toggle("met", S.todayWords >= S.goal);
-  // survival
-  $("lives").textContent = "♥".repeat(S.lives) + "♡".repeat(Math.max(0, MAX_LIVES - S.lives));
-  $("cLives").classList.toggle("danger", S.lives <= 1 && !S.dead);
-  const peril = S.started && !S.dead && S.lives <= 1 && S.todayWords < S.goal;
-  $("peril").style.display = peril ? "" : "none";
   renderMinCounter();
+  applyDisclosure();
   updateJump();   // draft may have changed under the caret
 }
-function renderDeath(){
-  $("ovDead").classList.toggle("on", !!S.dead);
-  if(S.dead) $("deadStats").innerHTML =
-    `<b>${S.lastCount.toLocaleString()}</b> characters written before the silence.`;
-}
-$("reviveBtn").onclick = ()=>{
-  S.dead = false; S.lives = MAX_LIVES; S.streak = 0; S.lastGoalDay = "";
-  renderStats(); renderDeath(); save();
-  toast("A new life. Don't waste it — write.");
-  draft.focus();
-};
 
-/* set goal */
-$("cGoal").onclick = ()=>{
-  const v = prompt("Daily character goal:", S.goal);
-  if(v && +v>0){ S.goal = Math.round(+v); renderStats(); save(); }
-};
+/* daily goal is set by clicking the floating counter (#minCounter) */
 
 /* ---- codex ---------------------------------------------------------- */
 let filter = "All", editing = null;
@@ -847,6 +784,7 @@ $("eSave").onclick = ()=>{
   editing.name = $("eName").value.trim(); editing.type = $("eType").value; editing.body = $("eBody").value;
   if(!editing.name){ toast("Give it a name first."); return; }
   if(!P().codex.includes(editing)) P().codex.push(editing);
+  S.seen.codex = true; applyDisclosure();   // your first entry: the codex is now permanent
   save(); backToList(); toast("Saved to codex.");
 };
 $("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ P().codex = P().codex.filter(e=>e!==editing); save(); backToList(); } };
@@ -890,9 +828,16 @@ function updateJump(){
   $("bJump").style.display = e ? "" : "none";
   if(e){ $("jumpName").textContent = e.name; $("bJump").dataset.id = e.id; }
 }
-draft.addEventListener("click", updateJump);
-draft.addEventListener("keyup", updateJump);
-document.addEventListener("selectionchange", ()=>{ if(document.activeElement===draft) updateJump(); });
+function refreshSel(){
+  // selecting text in the draft is the gesture that first reveals the codex
+  const s = window.getSelection();
+  const has = document.activeElement===draft && s && !s.isCollapsed && s.toString().trim().length>0;
+  document.body.classList.toggle("sel", !!has);
+  updateJump();
+}
+draft.addEventListener("click", refreshSel);
+draft.addEventListener("keyup", refreshSel);
+document.addEventListener("selectionchange", ()=>{ if(document.activeElement===draft) refreshSel(); });
 $("bJump").onclick = ()=>{ openCodexPanel(); openEntry($("bJump").dataset.id); };
 
 /* ---- codex panel toggle (mobile) ----------------------------------- */
@@ -942,9 +887,7 @@ function endSprint(complete){
   toast(complete ? `⏱ Time! ${words} characters at ${wpm} cpm. Beautiful.` : `Sprint ended — ${words} characters. Every one counts.`);
 }
 
-/* ---- focus / theme -------------------------------------------------- */
-$("bFocus").onclick = ()=>document.body.classList.toggle("focus");
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.body.classList.remove("focus"); });
+/* ---- theme ---------------------------------------------------------- */
 function applyTheme(t){ document.documentElement.dataset.theme=t; $("bTheme").textContent = t==="night"?"☀":"☾"; localStorage.setItem(THEME_KEY,t); }
 $("bTheme").onclick = ()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
 applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? "night" : "day"));
@@ -984,25 +927,24 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
    Accounts via magic-link email; one row per user, guarded by row-level
    security. Local-first: localStorage stays the live save; the cloud gets a
    debounced push after edits and a pull on load/sign-in/tab-focus, with
-   timestamp conflict prompts. Leave SB_URL empty to run fully local —
-   the ☁ button hides itself and nothing is loaded. */
+   timestamp conflict prompts. Leave SB_URL empty to run fully local. */
 const SB_URL = "https://zatrhqutklugogfejulz.supabase.co";   // Supabase project URL
 const SB_KEY = "sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";   // publishable key — safe to embed; RLS guards the data
 const SYNC_KEY = "writeordie.syncedAt";
 let sb = null, sbUser = null, pushT = null, dirty = false;
 function cloudStat(msg, good){ const el=$("cloudStat"); el.textContent=msg; el.style.color = good ? "var(--good)" : "var(--muted)"; }
 async function cloudInit(){
-  if(!SB_URL || !SB_KEY){ $("bCloud").style.display = "none"; return; }
+  if(!SB_URL || !SB_KEY) return;
   try{
     const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
     sb = createClient(SB_URL, SB_KEY);
     sb.auth.onAuthStateChange((_e, session)=>{
       sbUser = (session && session.user) || null;
       renderCloud();
-      if(sbUser) pull();
+      if(sbUser){ S.seen.sync = true; applyDisclosure(); pull(); }
     });
     window.addEventListener("focus", ()=>{ if(sbUser) pull(); });
-  }catch{ $("bCloud").style.display = "none"; }   // CDN unreachable — run fully local
+  }catch{}   // CDN unreachable — run fully local
 }
 function schedulePush(){ if(!sbUser) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(push, 3000); }
 async function push(){
@@ -1047,7 +989,7 @@ function applyState(s){
     $("chTitle").style.display = "";
   }
   S.lastCount = totalChars();
-  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); renderDeath(); applyInvisibleUI(); applyPhase(); save();
+  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); applyInvisibleUI(); save();
   clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
 }
 function renderCloud(){
@@ -1060,6 +1002,7 @@ $("cloudClose").onclick = ()=>$("ovCloud").classList.remove("on");
 $("cloudSend").onclick = async ()=>{
   const email = $("cloudEmail").value.trim();
   if(!email){ toast("Enter your email first."); return; }
+  if(!sb){ toast("Sync is offline right now — try again in a minute."); return; }
   const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] } });
   toast(error ? "Couldn't send the link — try again in a minute." : "Check your email for the sign-in link.");
 };
@@ -1072,9 +1015,11 @@ $("cloudOutBtn").onclick = async ()=>{
 if(new URLSearchParams(location.search).has("reset")){
   localStorage.clear(); location.replace(location.pathname); // strip ?reset
 }
-rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); renderDeath(); applyInvisibleUI(); applyPhase(); save(); cloudInit(); draft.focus();
-// catch a midnight crossing (or days of neglect) while the tab was left open
-window.addEventListener("focus", ()=>{ rollover(); renderStats(); renderDeath(); save(); });
+rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); applyInvisibleUI(); applyDisclosure(); save(); cloudInit(); draft.focus();
+// finishing a session (leaving the tab) once there's real text unlocks export
+window.addEventListener("blur", ()=>{ if(totalChars()>0 && !S.seen.export){ S.seen.export = true; applyDisclosure(); save(); } });
+// catch a midnight crossing (or days away) while the tab was left open
+window.addEventListener("focus", ()=>{ rollover(); renderStats(); save(); });
 </script>
 </body>
 </html>
