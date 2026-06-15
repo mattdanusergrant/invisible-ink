@@ -1,7 +1,5 @@
 # Opus — Neon backend (Apps)
 
-#LLM-generated
-
 invisible-ink's cloud sync now runs on the shared **Opus** Neon project (Neon Auth +
 Data API), not Supabase. One Neon project backs every app, namespaced by an `app` slug;
 invisible-ink's slug is `invisible-ink`.
