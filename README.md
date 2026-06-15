@@ -33,7 +33,9 @@ blank sheet, and tools appear only at the moment you actually reach for them.
   timeline). Caret-aware cross-links jump from a name in the draft to its entry.
 - **Blind mode** — seal prior sessions and only see what you write today.
 - **Optional cloud sync** — magic-link sign-in via Supabase; local-first, so it
-  runs fully offline if the cloud is unconfigured or unreachable.
+  runs fully offline if the cloud is unconfigured or unreachable. Backed by a
+  shared **Apps** Supabase project (one project for all apps, tagged by an `app`
+  slug — see `backend/SHARED-BACKEND.md`); invisible-ink's slug is `invisible-ink`.
 
 ## Run it
 

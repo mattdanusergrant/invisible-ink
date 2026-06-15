@@ -930,6 +930,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
    timestamp conflict prompts. Leave SB_URL empty to run fully local. */
 const SB_URL = "https://zatrhqutklugogfejulz.supabase.co";   // Supabase project URL
 const SB_KEY = "sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";   // publishable key — safe to embed; RLS guards the data
+const APP_ID = "invisible-ink";   // tenant slug in the shared "Apps" Supabase project (table app_state, keyed by (app, user_id))
 const SYNC_KEY = "writeordie.syncedAt";
 let sb = null, sbUser = null, pushT = null, dirty = false;
 function cloudStat(msg, good){ const el=$("cloudStat"); el.textContent=msg; el.style.color = good ? "var(--good)" : "var(--muted)"; }
@@ -951,12 +952,12 @@ async function push(){
   if(!sbUser) return;
   try{
     cloudStat("syncing…");
-    const { data } = await sb.from("manuscripts").select("updated_at").eq("user_id", sbUser.id).maybeSingle();
+    const { data } = await sb.from("app_state").select("updated_at").eq("app", APP_ID).eq("user_id", sbUser.id).maybeSingle();
     const last = localStorage.getItem(SYNC_KEY) || "";
     if(data && last && data.updated_at > last &&
        !confirm("A newer copy exists from another device. Overwrite it with this one?")){ pull(); return; }
     const now = new Date().toISOString();
-    const { error } = await sb.from("manuscripts").upsert({ user_id: sbUser.id, state: S, updated_at: now });
+    const { error } = await sb.from("app_state").upsert({ app: APP_ID, user_id: sbUser.id, state: S, updated_at: now });
     if(error) throw error;
     localStorage.setItem(SYNC_KEY, now); dirty = false;
     cloudStat("✓ synced", true);
@@ -968,7 +969,7 @@ async function push(){
 async function pull(){
   if(!sbUser) return;
   try{
-    const { data } = await sb.from("manuscripts").select("state,updated_at").eq("user_id", sbUser.id).maybeSingle();
+    const { data } = await sb.from("app_state").select("state,updated_at").eq("app", APP_ID).eq("user_id", sbUser.id).maybeSingle();
     if(!data){ push(); return; }                      // first sign-in on a fresh account: seed the cloud
     const last = localStorage.getItem(SYNC_KEY) || "";
     if(data.updated_at <= last){ cloudStat("✓ synced", true); return; }
