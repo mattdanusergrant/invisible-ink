@@ -923,41 +923,61 @@ $("restoreFile").onchange = e=>{
 let toastT;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
 
-/* ---- cloud sync (Supabase, optional) --------------------------------
-   Accounts via magic-link email; one row per user, guarded by row-level
-   security. Local-first: localStorage stays the live save; the cloud gets a
-   debounced push after edits and a pull on load/sign-in/tab-focus, with
-   timestamp conflict prompts. Leave SB_URL empty to run fully local. */
-const SB_URL = "https://zatrhqutklugogfejulz.supabase.co";   // Supabase project URL
-const SB_KEY = "sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";   // publishable key — safe to embed; RLS guards the data
+/* ---- cloud sync (Neon, optional) ------------------------------------
+   Accounts via magic-link email (Neon Auth); one row per user in the shared
+   "Apps" Neon project's Data API (PostgREST), guarded by row-level security.
+   Local-first: localStorage stays the live save; the cloud gets a debounced
+   push after edits and a pull on load/sign-in/tab-focus, with timestamp
+   conflict prompts. Leave NEON_DATA_API empty to run fully local. */
+const NEON_DATA_API = "https://ep-lucky-sunset-a67odjzu.apirest.us-west-2.aws.neon.tech/neondb/rest/v1";
+const NEON_AUTH_URL = "https://ep-lucky-sunset-a67odjzu.neonauth.us-west-2.aws.neon.tech/neondb/auth";
+const APP_ID = "invisible-ink";                  // tenant slug in the shared "Apps" project (table app_state)
 const SYNC_KEY = "writeordie.syncedAt";
-let sb = null, sbUser = null, pushT = null, dirty = false;
+let auth = null, sbUser = null, pushT = null, dirty = false;
 function cloudStat(msg, good){ const el=$("cloudStat"); el.textContent=msg; el.style.color = good ? "var(--good)" : "var(--muted)"; }
 async function cloudInit(){
-  if(!SB_URL || !SB_KEY) return;
+  if(!NEON_DATA_API || !NEON_AUTH_URL) return;
   try{
-    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    sb = createClient(SB_URL, SB_KEY);
-    sb.auth.onAuthStateChange((_e, session)=>{
-      sbUser = (session && session.user) || null;
-      renderCloud();
-      if(sbUser){ S.seen.sync = true; applyDisclosure(); pull(); }
-    });
-    window.addEventListener("focus", ()=>{ if(sbUser) pull(); });
-  }catch{}   // CDN unreachable — run fully local
+    const { createAuthClient } = await import("https://esm.sh/@neondatabase/neon-js/auth");
+    auth = createAuthClient(NEON_AUTH_URL);
+    await refreshUser();                              // returning from a magic link establishes the session
+    renderCloud();
+    if(sbUser){ S.seen.sync = true; applyDisclosure(); pull(); }
+    window.addEventListener("focus", ()=>{ if(sbUser){ refreshUser(); pull(); } });
+  }catch{}   // CDN / Neon unreachable — run fully local
+}
+async function refreshUser(){
+  try{ const { data } = await auth.getSession(); sbUser = (data && data.user) || null; }
+  catch{ sbUser = null; }
+  return sbUser;
+}
+async function authToken(){                           // JWT for the Data API (RLS reads its `sub` claim)
+  try{ const { data } = await auth.getSession(); return (data && ((data.session && data.session.token) || data.token)) || null; }
+  catch{ return null; }
+}
+async function dapi(path, opts){                      // fetch wrapper for the Neon Data API (PostgREST)
+  opts = opts || {};
+  const token = await authToken();
+  const headers = Object.assign({ "Content-Type":"application/json" }, opts.headers || {});
+  if(token) headers.Authorization = "Bearer " + token;
+  const res = await fetch(NEON_DATA_API.replace(/\/+$/,"") + path, Object.assign({}, opts, { headers }));
+  if(!res.ok) throw new Error("data api " + res.status);
+  return res;
 }
 function schedulePush(){ if(!sbUser) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(push, 3000); }
 async function push(){
   if(!sbUser) return;
   try{
     cloudStat("syncing…");
-    const { data } = await sb.from("manuscripts").select("updated_at").eq("user_id", sbUser.id).maybeSingle();
+    const rows = await (await dapi(`/app_state?app=eq.${APP_ID}&select=updated_at`)).json();
+    const remote = rows[0] && rows[0].updated_at;
     const last = localStorage.getItem(SYNC_KEY) || "";
-    if(data && last && data.updated_at > last &&
+    if(remote && last && remote > last &&
        !confirm("A newer copy exists from another device. Overwrite it with this one?")){ pull(); return; }
     const now = new Date().toISOString();
-    const { error } = await sb.from("manuscripts").upsert({ user_id: sbUser.id, state: S, updated_at: now });
-    if(error) throw error;
+    await dapi("/app_state", { method:"POST",
+      headers:{ Prefer:"resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ app: APP_ID, user_id: sbUser.id, state: S, updated_at: now }) });
     localStorage.setItem(SYNC_KEY, now); dirty = false;
     cloudStat("✓ synced", true);
   }catch{
@@ -968,7 +988,8 @@ async function push(){
 async function pull(){
   if(!sbUser) return;
   try{
-    const { data } = await sb.from("manuscripts").select("state,updated_at").eq("user_id", sbUser.id).maybeSingle();
+    const rows = await (await dapi(`/app_state?app=eq.${APP_ID}&select=state,updated_at`)).json();
+    const data = rows[0];
     if(!data){ push(); return; }                      // first sign-in on a fresh account: seed the cloud
     const last = localStorage.getItem(SYNC_KEY) || "";
     if(data.updated_at <= last){ cloudStat("✓ synced", true); return; }
@@ -1002,12 +1023,15 @@ $("cloudClose").onclick = ()=>$("ovCloud").classList.remove("on");
 $("cloudSend").onclick = async ()=>{
   const email = $("cloudEmail").value.trim();
   if(!email){ toast("Enter your email first."); return; }
-  if(!sb){ toast("Sync is offline right now — try again in a minute."); return; }
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] } });
-  toast(error ? "Couldn't send the link — try again in a minute." : "Check your email for the sign-in link.");
+  if(!auth){ toast("Sync is offline right now — try again in a minute."); return; }
+  try{
+    await auth.signIn.magicLink({ email, callbackURL: location.href.split("#")[0] });
+    toast("Check your email for the sign-in link.");
+  }catch{ toast("Couldn't send the link — try again in a minute."); }
 };
 $("cloudOutBtn").onclick = async ()=>{
-  await sb.auth.signOut(); localStorage.removeItem(SYNC_KEY);
+  try{ await auth.signOut(); }catch{}
+  sbUser = null; localStorage.removeItem(SYNC_KEY); renderCloud();
   toast("Signed out — your writing stays on this device.");
 };
 
