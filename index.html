@@ -1,1049 +1,1131 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Invisible Ink — write it. it hides. it's always there.</title>
 <style>
-  /* ---- theme ---------------------------------------------------------- */
-  :root{
-    --bg:#ffffff; --panel:#ffffff; --ink:#000000; --muted:#999999;
-    --line:#e0e0e0; --accent:#000000; --accent-soft:#f2f2f2; --good:#000000;
-    --shadow:0 1px 2px rgba(0,0,0,0.05),0 4px 16px rgba(0,0,0,0.07);
-    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  }
-  :root[data-theme="night"]{
-    --bg:#000000; --panel:#000000; --ink:#ffffff; --muted:#777777;
-    --line:#222222; --accent:#ffffff; --accent-soft:#111111; --good:#ffffff;
-    --shadow:0 1px 2px rgba(0,0,0,0.5),0 4px 16px rgba(0,0,0,0.6);
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
-    display:flex;flex-direction:column;overflow:hidden;
-  }
-  button{font-family:inherit;cursor:pointer}
-  /* ---- top bar -------------------------------------------------------- */
-  header{
-    display:flex;align-items:center;gap:14px;padding:10px 16px;
-    border-bottom:1px solid var(--line);background:var(--panel);
-    box-shadow:var(--shadow);flex:none;z-index:5;
-  }
-  .brand{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.12em;
-    color:var(--accent);white-space:nowrap;text-transform:uppercase;text-align:center}
-  .brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.05em;text-transform:none}
-  #mtitle{
-    font-family:var(--serif);font-size:16px;border:none;background:transparent;color:var(--ink);
-    padding:6px 8px;border-radius:8px;min-width:120px;flex:1 1 auto;
-  }
-  #mtitle:focus{outline:none;background:var(--bg)}
-  .tools{display:flex;gap:6px;margin-left:auto}
-  .tbtn{background:var(--bg);border:1px solid var(--line);color:var(--ink);
-    border-radius:9px;padding:7px 11px;font-size:13px;white-space:nowrap}
-  .tbtn:hover{border-color:var(--accent)}
-  .tbtn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
-  /* ---- layout --------------------------------------------------------- */
-  main{flex:1;display:flex;min-height:0}
-  .editor{flex:1;display:flex;flex-direction:column;min-width:0}
-  .etools{display:flex;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);
-    align-items:center;color:var(--muted);font-size:12px}
-  .etools .sp{margin-left:auto}
-  .chtitle{font-family:var(--serif);font-size:22px;font-weight:600;border:none;
-    background:transparent;color:var(--ink);padding:18px clamp(16px,8vw,90px) 0;outline:none;width:100%}
-  .chtitle::placeholder{color:var(--muted);opacity:.55}
-  #draft{
-    flex:1;width:100%;border:none;background:transparent;color:var(--ink);
-    font-family:var(--serif);font-size:19px;line-height:1.75;padding:14px clamp(16px,8vw,90px) 40px;
-    outline:none;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
-  }
-  #draft:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.7;pointer-events:none}
-  /* ---- chapters rail -------------------------------------------------- */
-  .chapters{width:240px;flex:none;border-right:1px solid var(--line);background:var(--panel);
-    display:flex;flex-direction:column;min-height:0}
-  .chhead{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 7px;
-    font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
-  .chlist{flex:1;overflow:auto;padding:0 8px 10px}
-  .chitem{border:1px solid transparent;border-radius:9px;margin:3px 2px;padding:7px 9px;cursor:pointer}
-  .chitem:hover{background:var(--bg)}
-  .chitem.on{background:var(--bg);border-color:var(--accent)}
-  .chmain{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .chname{font-family:var(--serif);font-size:14px;color:var(--ink);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .chwc{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
-  .chctl{display:none;gap:4px;margin-top:6px}
-  .chitem:hover .chctl,.chitem.on .chctl{display:flex}
-  .chctl button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--muted);
-    border-radius:6px;font-size:11px;padding:2px 0}
-  .chctl button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-  .chctl button:disabled{opacity:.3;cursor:default}
-  /* ---- codex ---------------------------------------------------------- */
-  aside{width:330px;flex:none;border-left:1px solid var(--line);background:var(--panel);
-    display:flex;flex-direction:column;min-height:0}
-  .ctabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px 6px}
-  .ctab{border:1px solid var(--line);background:var(--bg);color:var(--muted);
-    border-radius:999px;padding:4px 10px;font-size:11.5px}
-  .ctab.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
-  .csearch{margin:2px 12px 8px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;
-    background:var(--bg);color:var(--ink);font-size:13px}
-  .clist{flex:1;overflow:auto;padding:0 8px 8px}
-  .centry{padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin:6px 4px;
-    background:var(--bg);cursor:pointer}
-  .centry:hover{border-color:var(--accent)}
-  .centry .nm{font-family:var(--serif);font-size:14.5px;font-weight:600}
-  .centry .ty{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .centry .pv{font-size:12px;color:var(--muted);margin-top:3px;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .cempty{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px;line-height:1.6}
-  .cnew{margin:0 12px 12px;width:calc(100% - 24px)}
-  /* entry editor */
-  .ced{display:flex;flex-direction:column;gap:8px;padding:12px;height:100%;overflow:auto}
-  .ced input,.ced select,.ced textarea{font-family:var(--sans);font-size:14px;color:var(--ink);
-    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
-  .ced textarea{flex:1;min-height:160px;resize:vertical;font-family:var(--serif);font-size:15px;line-height:1.6}
-  .ced .row{display:flex;gap:8px}.ced .row>*{flex:1}
-  .ced .nm{font-family:var(--serif);font-size:18px}
-  /* ---- overlay / sprint ---------------------------------------------- */
-  .ov{position:fixed;inset:0;background:rgba(20,14,8,.45);display:none;
-    align-items:center;justify-content:center;z-index:20}
-  .ov.on{display:flex}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
-    padding:24px;width:min(380px,92vw);box-shadow:var(--shadow);text-align:center}
-  .card h2{font-family:var(--serif);margin:0 0 4px;color:var(--accent)}
-  .card p{color:var(--muted);font-size:13px;margin:0 0 16px}
-  .durs{display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
-  .dur{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;
-    padding:10px 14px;font-size:14px}
-  .dur.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .clock{font-family:var(--serif);font-size:52px;font-variant-numeric:tabular-nums;margin:6px 0}
-  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
-  .sub b{color:var(--ink);font-size:18px}
-  .ghist{font-size:12px;color:var(--muted);margin-top:14px;text-align:left;max-height:120px;overflow:auto}
-  .ghist div{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line)}
-  /* ---- toast ---------------------------------------------------------- */
-  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,40px);
-    background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;font-size:14px;
-    opacity:0;transition:.3s;pointer-events:none;z-index:30;box-shadow:var(--shadow);max-width:90vw}
-  #toast.show{opacity:1;transform:translate(-50%,0)}
-  /* ---- invisible ink -------------------------------------------------- */
-  #draft{caret-color:var(--accent)}
-  .ink-char{transition:opacity 0.8s ease}
-  /* ---- floating counter ----------------------------------------------- */
-  #minCounter{
-    position:fixed;bottom:24px;right:28px;font-size:13px;letter-spacing:.03em;
-    color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer;
-    transition:opacity .6s;z-index:4;
-  }
-  /* ---- flow vs. pause -------------------------------------------------
-     The page is a blank sheet. While you type (body.flowing) every piece of
-     chrome fades away; when you pause it returns. Nothing competes with the
-     sentence you're writing. */
-  header,.etools,.chtitle,.chapters,aside,#minCounter{transition:opacity .5s ease}
-  body.flowing header,
-  body.flowing .etools,
-  body.flowing .chtitle,
-  body.flowing .chapters,
-  body.flowing aside{opacity:0;pointer-events:none}
-  body.flowing #minCounter{opacity:.18}
-  body.revealed #minCounter{display:none}
-  /* ---- just-in-time disclosure ----------------------------------------
-     A tool does not exist until the moment a real gesture calls for it, and
-     once revealed it stays (sticky). Writers who only write keep a blank page
-     forever; the UI grows only toward what this person actually does.
-       has-chapters : a 2nd chapter exists       → rail + chapter titles
-       has-codex    : a codex entry was saved    → codex panel + buttons
-       has-projects : a 2nd WIP exists           → projects rail + WIP name
-       has-export   : a session has ended        → export / backup
-       has-sync     : returned on a later day    → cloud sync
-       sel          : text is selected right now → Selection → Codex */
-  .chapters,aside{display:none}
-  #prSection,#mtitle,.chtitle{display:none}
-  #bChapters,#bCodex,#bExport,#bCloud,#bSel{display:none}
-  body.has-chapters .chapters{display:flex}
-  body.has-chapters .chtitle{display:block}
-  body.has-codex aside{display:flex}
-  body.has-projects #prSection{display:block}
-  body.has-projects #mtitle,
-  body.has-export #mtitle{display:block}
-  body.has-chapters #bChapters,
-  body.has-codex #bCodex,
-  body.has-export #bExport,
-  body.has-sync #bCloud{display:inline-block}
-  body.has-codex #bSel,
-  body.sel #bSel{display:inline-block}
-  @media (max-width:760px){
-    aside{position:fixed;right:0;top:0;bottom:0;width:min(320px,86vw);z-index:15;
-      transform:translateX(100%);transition:.25s;box-shadow:var(--shadow)}
-    body.has-codex aside.open{transform:translateX(0)}
-    .chapters{position:fixed;left:0;top:0;bottom:0;width:min(280px,80vw);z-index:15;
-      transform:translateX(-100%);transition:.25s;box-shadow:var(--shadow)}
-    body.has-chapters .chapters.open{transform:translateX(0)}
-    .brand small{display:none}
-  }
+/* ── theme ─────────────────────────────────────────────────── */
+:root{
+  --bg:#fff; --ink:#000; --muted:#999; --line:#e8e8e8;
+  --accent:#000; --accent-soft:#f5f5f5;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.07);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="night"]{
+  --bg:#000; --ink:#fff; --muted:#666; --line:#1e1e1e;
+  --accent:#fff; --accent-soft:#111;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+
+/* ── tutorial ──────────────────────────────────────────────── */
+#tut{
+  position:fixed;inset:0;background:var(--bg);z-index:100;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;
+}
+.tscreen{display:none;flex-direction:column;align-items:center;text-align:center;max-width:500px;width:100%}
+.tscreen.on{display:flex}
+.tscreen h2{font-family:var(--serif);font-size:28px;font-weight:400;margin:0 0 10px}
+.tscreen p{color:var(--muted);font-size:16px;line-height:1.75;margin:0 0 20px}
+.tcont{background:none;border:1px solid var(--line);color:var(--ink);
+  padding:11px 28px;border-radius:10px;font-size:15px;margin-top:6px}
+.tcont:hover{border-color:var(--accent)}
+.tpdots{display:flex;gap:6px;margin-top:22px}
+.tpdot{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.tpdot.on{background:var(--accent)}
+
+/* tutorial: fading word demo */
+.tink-demo{
+  font-family:var(--serif);font-size:21px;line-height:2;
+  min-height:64px;margin:20px 0 4px;color:var(--ink);
+  display:flex;flex-wrap:wrap;gap:0 4px;justify-content:center;align-items:center;
+}
+.tink-demo span{transition:opacity 0.9s ease}
+
+/* tutorial: privacy cards */
+.pcards{display:flex;gap:14px;width:100%;margin:18px 0}
+.pcard{flex:1;border:1px solid var(--line);border-radius:14px;padding:18px 16px;
+  cursor:pointer;text-align:left;transition:border-color .2s;background:none}
+.pcard:hover{border-color:var(--accent)}
+.pcard.chosen{border-color:var(--accent);background:var(--accent-soft)}
+.pcard h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 7px;color:var(--ink)}
+.pcard p{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+
+/* tutorial: sandbox draft */
+#tutDraft{
+  width:100%;min-height:72px;border:1px solid var(--line);border-radius:12px;
+  padding:14px 18px;font-family:var(--serif);font-size:19px;line-height:1.75;
+  color:var(--ink);background:var(--bg);outline:none;margin:14px 0;
+  white-space:pre-wrap;word-break:break-word;caret-color:var(--accent);
+}
+#tutDraft:empty::before{content:"Type anything here\2026";color:var(--muted);opacity:.6;pointer-events:none}
+
+/* ── shared button ──────────────────────────────────────────── */
+.tbtn{background:var(--bg);border:1px solid var(--line);color:var(--ink);
+  border-radius:9px;padding:7px 12px;font-size:13px;white-space:nowrap}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* ── flow view ─────────────────────────────────────────────── */
+#flowView{display:flex;flex-direction:column;height:100%}
+body.grow #flowView{display:none}
+
+header{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  border-bottom:1px solid var(--line);background:var(--bg);
+  box-shadow:var(--shadow);flex:none;z-index:5;
+}
+.brand{font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:.12em;
+  color:var(--accent);text-transform:uppercase;white-space:nowrap}
+.brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.04em;text-transform:none}
+.htools{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap}
+
+#draft{
+  flex:1;width:100%;border:none;background:transparent;color:var(--ink);
+  font-family:var(--serif);font-size:19px;line-height:1.8;
+  padding:22px clamp(16px,8vw,100px) 80px;
+  outline:none;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+  caret-color:var(--accent);
+}
+#draft:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.6;pointer-events:none}
+
+/* invisible ink */
+.ink-char{transition:opacity 0.8s ease}
+
+/* floating counter */
+#counter{
+  position:fixed;bottom:24px;right:28px;font-size:13px;color:var(--muted);
+  font-variant-numeric:tabular-nums;cursor:pointer;z-index:4;transition:opacity .5s;
+}
+body.revealed #counter{display:none}
+
+/* mood prompt */
+#moodPrompt{
+  position:fixed;bottom:24px;left:28px;z-index:4;
+  display:none;align-items:center;gap:8px;font-size:13px;color:var(--muted);
+}
+#moodPrompt.on{display:flex}
+.mdot{width:11px;height:11px;border-radius:50%;border:1px solid var(--muted);
+  cursor:pointer;transition:background .15s,border-color .15s;flex:none}
+.mdot:hover{border-color:var(--accent);background:var(--accent)}
+
+/* flow chrome fade */
+header,#counter{transition:opacity .5s ease}
+body.flowing header{opacity:0;pointer-events:none}
+body.flowing #counter{opacity:.15}
+
+/* grow button — hidden until first session ends */
+#bGrow{display:none}
+body.has-grow #bGrow{display:inline-block}
+#bExport{display:none}
+
+/* ── grow view ─────────────────────────────────────────────── */
+#growView{display:none;flex-direction:column;height:100%}
+body.grow #growView{display:flex}
+
+.grow-header{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  border-bottom:1px solid var(--line);background:var(--bg);
+  box-shadow:var(--shadow);flex:none;
+}
+.gtabs{display:flex;gap:4px}
+.gtab{padding:6px 14px;border-radius:8px;font-size:13px;color:var(--muted);
+  border:1px solid transparent;background:none}
+.gtab.on{border-color:var(--line);background:var(--accent-soft);color:var(--ink)}
+.gtab:hover:not(.on){color:var(--ink)}
+
+.grow-body{flex:1;overflow-y:auto;min-height:0}
+
+/* timeline */
+#timeline{padding:28px clamp(16px,6vw,80px) 40px}
+.tl-empty{color:var(--muted);text-align:center;padding:60px 20px;font-family:var(--serif);font-size:17px}
+.tl-entry{
+  border-left:1px solid var(--line);padding:0 0 30px 22px;
+  margin-left:6px;position:relative;cursor:pointer;
+}
+.tl-entry::before{
+  content:"";position:absolute;left:-5px;top:5px;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--muted);transition:border-color .2s;
+}
+.tl-entry:hover::before{border-color:var(--accent)}
+.tl-entry.has-mood::before{background:var(--mood-col,var(--muted));border-color:var(--mood-col,var(--muted))}
+.tl-date{font-size:12px;color:var(--muted);margin-bottom:5px}
+.tl-preview{font-family:var(--serif);font-size:15px;line-height:1.6;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tl-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tl-tag{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+
+/* entry expanded */
+#entryView{padding:28px clamp(16px,6vw,80px);display:none}
+#entryView.on{display:block}
+.ev-nav{display:flex;align-items:baseline;gap:12px;margin-bottom:18px}
+.ev-back{font-size:13px;color:var(--muted);cursor:pointer;border:none;background:none;padding:0}
+.ev-back:hover{color:var(--ink)}
+.ev-date{font-size:13px;color:var(--muted)}
+.ev-body{font-family:var(--serif);font-size:17px;line-height:1.8;white-space:pre-wrap;word-break:break-word;outline:none;border-radius:8px;padding:4px;transition:box-shadow .2s}
+.ev-body[contenteditable="true"]{box-shadow:0 0 0 1px var(--line);padding:8px}
+.ev-reflection{
+  margin-top:22px;padding:14px 16px;border-left:2px solid var(--line);
+  font-family:var(--serif);font-size:15px;line-height:1.7;color:var(--muted);
+}
+.ev-ref-date{font-size:11px;color:var(--muted);margin-bottom:5px;font-family:var(--sans)}
+.ev-add-ref{
+  margin-top:20px;width:100%;border:1px dashed var(--line);border-radius:10px;
+  padding:12px 16px;text-align:left;color:var(--muted);font-size:14px;
+  cursor:pointer;background:none;transition:border-color .2s,color .2s;
+}
+.ev-add-ref:hover{border-color:var(--accent);color:var(--ink)}
+.ev-edit-hint{font-size:11px;color:var(--muted);opacity:.5;margin-top:10px}
+.ref-ta{
+  width:100%;min-height:80px;border:1px solid var(--line);border-radius:10px;
+  padding:12px;font-family:var(--serif);font-size:15px;color:var(--ink);
+  background:var(--bg);outline:none;resize:vertical;margin-top:10px;line-height:1.6;
+}
+.ref-ta:focus{border-color:var(--accent)}
+.ref-row{display:flex;gap:8px;margin-top:8px}
+
+/* graph */
+#tabGraph{flex:1;display:flex;flex-direction:column;min-height:0}
+.graph-bar{padding:10px 16px;border-bottom:1px solid var(--line);flex:none}
+.graph-bar input{
+  border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+  font-size:13px;color:var(--ink);background:var(--bg);width:100%;max-width:320px;outline:none;
+}
+.graph-bar input:focus{border-color:var(--accent)}
+#graphSvg{flex:1;display:block;width:100%}
+
+/* themes */
+#themesList{padding:24px clamp(16px,6vw,80px) 40px}
+.th-suggest{
+  border:1px dashed var(--accent);border-radius:12px;padding:16px 18px;
+  margin-bottom:12px;background:var(--accent-soft);
+}
+.th-suggest p{margin:0 0 12px;font-size:14px;line-height:1.6}
+.th-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.th-card h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 4px}
+.th-card p{font-size:13px;color:var(--muted);margin:0}
+.th-chip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);
+  color:var(--muted);display:inline-block;margin-right:4px}
+.th-empty{color:var(--muted);text-align:center;padding:50px 20px;font-family:var(--serif);font-size:16px;line-height:1.7}
+
+/* overlays */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;
+  align-items:center;justify-content:center;z-index:20}
+.ov.on{display:flex}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:16px;
+  padding:24px;width:min(400px,92vw);box-shadow:var(--shadow)}
+.card h2{font-family:var(--serif);margin:0 0 6px}
+.card p{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.6}
+.cinput{
+  width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;
+  font-size:14px;color:var(--ink);background:var(--bg);display:block;margin-bottom:10px;outline:none;
+}
+.cinput:focus{border-color:var(--accent)}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,40px);
+  background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;
+  font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:30;max-width:90vw;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:580px){
+  .pcards{flex-direction:column}
+  .htools .tbtn:not(.primary):not(#bGrow){display:none}
+  #timeline,#entryView,#themesList{padding:16px}
+}
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">INVISIBLE INK<small>just keep writing</small></div>
-  <input id="mtitle" placeholder="Name this WIP" />
-  <div class="tools">
-    <button class="tbtn" id="bChapters" title="Chapters">📑</button>
-    <button class="tbtn primary" id="bSprint">⏱ Sprint</button>
-    <button class="tbtn" id="bInvisible" title="Invisible ink — each letter fades 10 s after you type it; everything stays">Invisible</button>
-    <button class="tbtn" id="bPeek" title="Reveal your invisible draft" style="display:none">👁 Peek</button>
-    <button class="tbtn" id="bTheme" title="Day / night">☾</button>
-    <button class="tbtn" id="bExport" title="Export &amp; backup">↓</button>
-    <button class="tbtn" id="bCloud" title="Account &amp; sync">☁</button>
-    <button class="tbtn" id="bCodex">📖 Codex</button>
+
+<!-- ── tutorial ─────────────────────────────────────────────── -->
+<div id="tut">
+  <div class="tscreen on" id="ts0">
+    <div class="tink-demo" id="tutWords"></div>
+    <h2>Flow</h2>
+    <p>Write without looking back.<br>Each letter fades ten seconds after you type it.<br>The words are always there — just invisible.</p>
+    <button class="tcont" onclick="tutNext()">Continue &#8594;</button>
+    <div class="tpdots"><div class="tpdot on"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div></div>
   </div>
-</header>
-
-<div id="minCounter" title="Click to set your daily goal">0 / 500</div>
-
-<main>
-  <nav class="chapters" id="chapters">
-    <div id="prSection">
-    <div class="chhead"><span>Projects</span>
-      <button class="tbtn" id="prAdd" title="Start a new WIP" style="padding:3px 10px">＋</button></div>
-    <div class="chlist" id="prlist" style="flex:none;max-height:34%"></div>
-    </div>
-    <div class="chhead"><span>Chapters</span>
-      <button class="tbtn" id="chAdd" title="Add chapter" style="padding:3px 10px">＋</button></div>
-    <div class="chlist" id="chlist"></div>
-  </nav>
-
-  <section class="editor">
-    <input id="chTitle" class="chtitle" placeholder="Chapter title" />
-    <div class="etools">
-      <button class="tbtn" id="bJump" title="Caret is on a codex name — jump to its entry" style="display:none;padding:4px 9px;font-size:12px">📖 <span id="jumpName"></span></button>
-      <button class="tbtn" id="bSel" style="padding:4px 9px;font-size:12px">＋ Selection → Codex</button>
-      <span class="sp" id="counts">0 chars</span>
-    </div>
-    <div id="draft" contenteditable="true" spellcheck="true" data-placeholder="Just start writing. Each letter fades — the words stay."></div>
-  </section>
-
-  <aside id="codex">
-    <!-- list view -->
-    <div id="cListView" style="display:flex;flex-direction:column;min-height:0;flex:1">
-      <div class="ctabs" id="ctabs"></div>
-      <input class="csearch" id="csearch" placeholder="Search the codex…" />
-      <div class="clist" id="clist"></div>
-      <button class="tbtn primary cnew" id="cNew">＋ New entry</button>
-    </div>
-    <!-- editor view -->
-    <div id="cEditView" class="ced" style="display:none">
-      <input class="nm" id="eName" placeholder="Name" />
-      <div class="row">
-        <select id="eType"></select>
-      </div>
-      <textarea id="eBody" placeholder="Who / what / where. Appearance, motives, history, secrets — whatever you need at a glance while drafting."></textarea>
-      <div class="row">
-        <button class="tbtn primary" id="eSave">Save</button>
-        <button class="tbtn" id="eBack">Back</button>
-        <button class="tbtn" id="eDel" style="color:var(--accent)">Delete</button>
-      </div>
-    </div>
-  </aside>
-</main>
-
-<!-- sprint overlay -->
-<div class="ov" id="ovSprint">
-  <div class="card" id="sprintSetup">
-    <h2>Writing sprint</h2>
-    <p>Pick a length. Write without stopping. The world can wait.</p>
-    <div class="durs" id="durs"></div>
-    <button class="tbtn primary" id="sStart" style="width:100%;padding:11px">Begin</button>
-    <div class="ghist" id="ghist"></div>
+  <div class="tscreen" id="ts1">
+    <svg id="tutGraph" width="320" height="170" style="margin:8px 0 4px"></svg>
+    <h2>Grow</h2>
+    <p>After you write, see what you've been thinking about.<br>Patterns emerge. Connections you didn't know were there.</p>
+    <button class="tcont" onclick="tutNext()">Continue &#8594;</button>
+    <div class="tpdots"><div class="tpdot"></div><div class="tpdot on"></div><div class="tpdot"></div><div class="tpdot"></div></div>
   </div>
-  <div class="card" id="sprintRun" style="display:none">
-    <h2 id="runTitle">Sprint</h2>
-    <div class="clock" id="clock">25:00</div>
-    <div class="sub"><b id="runWords">0</b> characters written</div>
-    <button class="tbtn" id="sEnd" style="width:100%;padding:11px">End sprint</button>
+  <div class="tscreen" id="ts2">
+    <h2>Your words are yours</h2>
+    <p>Before your first entry — where should it live?</p>
+    <div class="pcards">
+      <button class="pcard" id="pcLocal" onclick="chooseStorage('local')">
+        <h3>This device only</h3>
+        <p>Entries stay in this browser. Nothing leaves. No account, no server, no exceptions.</p>
+      </button>
+      <button class="pcard" id="pcCloud" onclick="chooseStorage('cloud')">
+        <h3>Cloud backup</h3>
+        <p>Entries are encrypted here before being sent anywhere. We can't read them. Neither can anyone else.</p>
+      </button>
+    </div>
+    <button class="tcont" id="ts2cont" style="display:none" onclick="tutNext()">Continue &#8594;</button>
+    <div class="tpdots"><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot on"></div><div class="tpdot"></div></div>
+  </div>
+  <div class="tscreen" id="ts3">
+    <h2>Try it</h2>
+    <p>Type anything. Watch it disappear.</p>
+    <div id="tutDraft" contenteditable="true" spellcheck="true"></div>
+    <button class="tcont" id="tutBegin" style="display:none" onclick="finishTutorial()">Begin &#8594;</button>
+    <div class="tpdots"><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot on"></div></div>
   </div>
 </div>
 
-<!-- account / cloud sync -->
+<!-- ── flow ─────────────────────────────────────────────────── -->
+<div id="flowView">
+  <header>
+    <div class="brand">INVISIBLE INK<small>write it. it hides.</small></div>
+    <div class="htools">
+      <button class="tbtn primary" id="bInk">Invisible</button>
+      <button class="tbtn" id="bPeek" style="display:none">&#128065; Peek</button>
+      <button class="tbtn" id="bTheme">&#9790;</button>
+      <button class="tbtn" id="bExport">&#8595;</button>
+      <button class="tbtn" id="bCloud">&#9729;</button>
+      <button class="tbtn" id="bGrow">Grow &#8594;</button>
+    </div>
+  </header>
+  <div id="draft" contenteditable="true" spellcheck="true"
+    data-placeholder="Just start writing. Each letter fades — the words stay."></div>
+  <div id="counter">0 / 500</div>
+  <div id="moodPrompt">
+    <span style="margin-right:2px">how are you?</span>
+    <div class="mdot" data-m="1" title="rough"></div>
+    <div class="mdot" data-m="2"></div>
+    <div class="mdot" data-m="3" title="okay"></div>
+    <div class="mdot" data-m="4"></div>
+    <div class="mdot" data-m="5" title="great"></div>
+  </div>
+</div>
+
+<!-- ── grow ─────────────────────────────────────────────────── -->
+<div id="growView">
+  <div class="grow-header">
+    <button class="tbtn" id="bFlow">&#8592; Flow</button>
+    <div class="gtabs" style="margin-left:16px">
+      <button class="gtab on" data-tab="timeline" onclick="switchGrowTab('timeline')">Timeline</button>
+      <button class="gtab" data-tab="graph" id="gTabGraph" onclick="switchGrowTab('graph')" style="display:none">Graph</button>
+      <button class="gtab" data-tab="themes" onclick="switchGrowTab('themes')">Themes</button>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="tbtn" id="bThemeG">&#9790;</button>
+      <button class="tbtn" id="bExportG">&#8595;</button>
+    </div>
+  </div>
+  <div class="grow-body" id="growBody">
+    <div id="tabTimeline">
+      <div id="entryView"></div>
+      <div id="timeline"></div>
+    </div>
+    <div id="tabGraph" style="display:none;flex-direction:column">
+      <div class="graph-bar">
+        <input id="graphQ" placeholder="Filter by theme or person&#8230;" oninput="renderGraph()"/>
+      </div>
+      <svg id="graphSvg"></svg>
+    </div>
+    <div id="tabThemes" style="display:none">
+      <div id="themesList"></div>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ovCloud">
   <div class="card">
     <h2>Sync</h2>
     <div id="cloudOut">
-      <p>Write anywhere — your manuscript follows you. We email a sign-in link; no password to remember. Until then everything stays on this device.</p>
-      <input class="csearch" id="cloudEmail" type="email" placeholder="you@example.com" style="width:100%;margin:0 0 10px;display:block" />
+      <p>Your entries are encrypted on this device before anything is sent. We can't read them.</p>
+      <input class="cinput" id="cloudEmail" type="email" placeholder="you@example.com"/>
       <button class="tbtn primary" id="cloudSend" style="width:100%;padding:11px">Email me a sign-in link</button>
     </div>
     <div id="cloudIn" style="display:none">
       <p id="cloudWho" style="color:var(--ink)"></p>
       <p id="cloudStat"></p>
-      <button class="tbtn" id="cloudOutBtn" style="width:100%;padding:11px">Sign out (keep writing locally)</button>
+      <button class="tbtn" id="cloudOutBtn" style="width:100%;padding:11px">Sign out — keep writing locally</button>
     </div>
     <button class="tbtn" id="cloudClose" style="width:100%;margin-top:10px">Close</button>
   </div>
 </div>
 
-<input type="file" id="restoreFile" accept="application/json" style="display:none" />
+<input type="file" id="restoreFile" accept="application/json" style="display:none"/>
 <div id="toast"></div>
 
 <script>
 "use strict";
-/* Invisible Ink — a single-file writing studio built around one idea: keep the
-   writer in flow. Each letter fades 10 s after you type it (the words always
-   stay); while you type, the page is a blank sheet. Tools appear only at the
-   moment a real gesture calls for them (just-in-time disclosure) and never get
-   in the way of the sentence. Worldbuilding codex, chapters, projects, sprints
-   and optional cloud sync are all revealed on demand. Vanilla JS, no deps,
-   localStorage save. Storage keys keep the project's original "writeordie.*"
-   prefix so existing saves survive the rename. */
+/* Invisible Ink — mental health journal. Two modes: Flow (write without seeing)
+   and Grow (see what you've been thinking about). Vanilla JS, no deps, single
+   file, localStorage first. #LLM-generated */
 
-const KEY = "writeordie.v1", THEME_KEY = "writeordie.theme";
-const INK_MS = 10000;                 // a letter fades this long after you type it
-const FLOW_REARM_MS = 15000;          // sustained typing re-summons invisible ink
-// one-time migration from the project's former name ("Loomwright")
-if(!localStorage.getItem(KEY) && localStorage.getItem("loomwright.v1"))
-  localStorage.setItem(KEY, localStorage.getItem("loomwright.v1"));
-if(!localStorage.getItem(THEME_KEY) && localStorage.getItem("loomwright.theme"))
-  localStorage.setItem(THEME_KEY, localStorage.getItem("loomwright.theme"));
-const TYPES = ["Character","Location","Faction","Lore","Timeline"];
+const KEY = "ii.journal.v1", THEME_KEY = "writeordie.theme";
+const INK_MS = 10000;
+const FLOW_REARM_MS = 15000;
+const FLOW_PAUSE_MS = 2000;
+const MOOD_COLORS = ["","#e57373","#ffb74d","#888","#81c784","#4db6ac"];
+const MOOD_LABELS = ["","rough","","okay","","great"];
+
 const $ = id => document.getElementById(id);
 const today = () => new Date().toISOString().slice(0,10);
-const wc = t => (t.trim().match(/\S+/g) || []).length;
-const totalChars = () => { const p=P(); return p.chapters.reduce((n,c)=>n+c.body.length,0) + (p.blindSegments||[]).reduce((n,s)=>n+s.text.length,0) + (p.blindDraft||"").length; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const esc = s => (s||"").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const fmtDate = ts => new Date(ts).toLocaleDateString(undefined,
+  {weekday:"long", month:"long", day:"numeric"});
 
-/* ---- contenteditable helpers --------------------------------------- */
-function getDraftText(){
-  // walk DOM so <br> and block elements become \n regardless of browser quirks
-  function walk(node){
-    if(node.nodeType===Node.TEXT_NODE) return node.textContent;
-    if(node.nodeName==="BR") return "\n";
-    const isBlock = node!==draft && /^(DIV|P)$/.test(node.nodeName);
-    const inner = Array.from(node.childNodes).map(walk).join("");
-    return isBlock ? "\n"+inner : inner;
-  }
-  return walk(draft).replace(/\n$/, "") || "";
+/* ── state ────────────────────────────────────────────────── */
+const freshJournal = (name) => ({id:uid(), name:name||"Journal", entries:[]});
+const freshSeen = () => ({grow:false, graph:false, themes:false, export:false});
+
+function freshState(){
+  const j = freshJournal();
+  return {
+    tutorialDone:false, storageChoice:null,
+    journals:[j], journalId:j.id,
+    goal:500, day:today(), todayChars:0, lastCount:0,
+    streak:0, lastGoalDay:"",
+    invisible:true, inkManualOff:false, revealDay:"",
+    firstDay:today(),
+    themes:[], dismissedWords:[], themeSensitivity:3,
+    seen:freshSeen()
+  };
 }
+
+function normalize(s){
+  const st = Object.assign(freshState(), s);
+  if(!Array.isArray(st.journals)||!st.journals.length) st.journals = [freshJournal()];
+  st.journals.forEach(j=>{
+    if(!Array.isArray(j.entries)) j.entries = [];
+    j.entries.forEach(e=>{
+      if(!Array.isArray(e.reflections)) e.reflections = [];
+      if(!Array.isArray(e.confirmed_themes)) e.confirmed_themes = [];
+    });
+  });
+  if(!st.journalId||!st.journals.find(j=>j.id===st.journalId))
+    st.journalId = st.journals[0].id;
+  if(!Array.isArray(st.themes)) st.themes = [];
+  if(!Array.isArray(st.dismissedWords)) st.dismissedWords = [];
+  st.seen = Object.assign(freshSeen(), s.seen||{});
+  return st;
+}
+
+let S;
+function loadState(){
+  try{ const r=JSON.parse(localStorage.getItem(KEY)); if(r) return normalize(r); }catch{}
+  return freshState();
+}
+S = loadState();
+
+let saveT;
+function save(){ clearTimeout(saveT); saveT=setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); schedulePush(); }
+
+/* ── journal / entry ──────────────────────────────────────── */
+const J = () => S.journals.find(j=>j.id===S.journalId)||S.journals[0];
+
+function todayEntry(create=true){
+  const j = J();
+  const existing = j.entries.filter(e=>e.date===today()).sort((a,b)=>b.timestamp-a.timestamp)[0];
+  if(existing) return existing;
+  if(!create) return null;
+  const e = {id:uid(), date:today(), timestamp:Date.now(), body:"", mood:null, reflections:[], confirmed_themes:[]};
+  j.entries.push(e);
+  return e;
+}
+
+function allEntriesText(){ return J().entries.map(e=>e.body).join(" "); }
+
+/* ── contenteditable helpers ──────────────────────────────── */
+const draft = $("draft");
+
+function getDraftText(){
+  function walk(n){
+    if(n.nodeType===Node.TEXT_NODE) return n.textContent;
+    if(n.nodeName==="BR") return "\n";
+    const inner = Array.from(n.childNodes).map(walk).join("");
+    return (n!==draft && /^(DIV|P)$/.test(n.nodeName)) ? "\n"+inner : inner;
+  }
+  return walk(draft).replace(/\n$/,"") || "";
+}
+
 function setDraftText(text){
   draft.innerHTML = "";
   if(!text) return;
-  text.split("\n").forEach((line, i)=>{
+  text.split("\n").forEach((line,i)=>{
     if(i>0) draft.appendChild(document.createElement("br"));
     if(line) draft.appendChild(document.createTextNode(line));
   });
 }
-function getCaretPos(){
+
+/* ── invisible ink ────────────────────────────────────────── */
+function wrapLastChar(container){
   const sel = window.getSelection();
-  if(!sel || !sel.rangeCount) return 0;
+  if(!sel||!sel.rangeCount) return;
   const range = sel.getRangeAt(0);
-  const pre = document.createRange();
-  pre.selectNodeContents(draft);
-  pre.setEnd(range.startContainer, range.startOffset);
-  return pre.toString().length;
-}
-function wrapLastChar(){
-  const sel = window.getSelection();
-  if(!sel || !sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  const node = range.startContainer;
-  const offset = range.startOffset;
-  if(node.nodeType!==Node.TEXT_NODE || !draft.contains(node) || offset<1) return;
-  // isolate the just-typed character via splitText
-  if(offset < node.textContent.length) node.splitText(offset);
+  const node = range.startContainer, offset = range.startOffset;
+  if(node.nodeType!==Node.TEXT_NODE||!container.contains(node)||offset<1) return;
+  if(offset<node.textContent.length) node.splitText(offset);
   const charNode = offset>1 ? node.splitText(offset-1) : node;
-  // if the char landed inside an existing ink-char span (browser cursor snap),
-  // pull it out to a sibling position so it gets its own independent fade
   const par = charNode.parentNode;
-  if(par !== draft && par.classList && par.classList.contains("ink-char")){
+  if(par!==container&&par.classList&&par.classList.contains("ink-char"))
     par.parentNode.insertBefore(charNode, par.nextSibling);
-  }
   const span = document.createElement("span");
   span.className = "ink-char";
   span.dataset.t = Date.now().toString();
   charNode.parentNode.insertBefore(span, charNode);
   span.appendChild(charNode);
-  // restore cursor right after the new span
   const r = document.createRange();
   r.setStartAfter(span); r.collapse(true);
   sel.removeAllRanges(); sel.addRange(r);
-  // schedule fade
   setTimeout(()=>{
-    if(span.isConnected && S.invisible){ span.style.transition="opacity 0.8s ease"; span.style.opacity="0"; }
+    if(span.isConnected && S.invisible){
+      span.style.transition="opacity 0.8s ease";
+      span.style.opacity="0";
+    }
   }, INK_MS);
 }
 
-/* ---- state ---------------------------------------------------------- */
-const freshProject = name => { const cid = uid(); return {
-  id: uid(), name: name || "Untitled WIP",
-  chapters:[{id:cid, title:"Chapter 1", body:""}], currentId: cid, codex:[],
-  blindMode:false, blindDraft:"", blindDay:"", blindSegments:[]
-};};
-const freshSeen = () => ({chapters:false, codex:false, projects:false, export:false, sync:false});
-const fresh = () => { const p = freshProject(); return {
-  goal:500,
-  day:today(), todayWords:0, lastCount:0,   // characters written today = additive deltas
-  streak:0, lastGoalDay:"",                 // positive-only streak (no stakes)
-  sprints:[],
-  invisible:true, inkManualOff:false, revealDay:"",  // invisible-ink mode
-  firstDay:today(),                         // for the "returned on a later day" cue
-  seen: freshSeen(),                        // sticky just-in-time disclosure flags
-  projects:[p], projectId:p.id              // every WIP: own chapters + codex
-};};
-function totalCharsOf(st){
-  const p = st.projects.find(x=>x.id===st.projectId) || st.projects[0];
-  return p ? p.chapters.reduce((n,c)=>n+c.body.length,0) + (p.blindSegments||[]).reduce((n,s)=>n+s.text.length,0) + (p.blindDraft||"").length : 0;
-}
-// fold any loaded/restored object into the current shape
-// (migrates v1 single-body and v2 single-manuscript saves into one project)
-function normalize(s){
-  const st = Object.assign(fresh(), s);
-  if(!Array.isArray(s.projects) || !s.projects.length){
-    const p = freshProject(s.title);
-    if(Array.isArray(s.chapters) && s.chapters.length){ p.chapters = s.chapters; p.currentId = s.currentId; }
-    else p.chapters[0].body = s.body || "";           // v1 (single body)
-    if(Array.isArray(s.codex)) p.codex = s.codex;
-    st.projects = [p]; st.projectId = p.id;
-  }
-  st.projects.forEach(p=>{
-    if(!Array.isArray(p.chapters) || !p.chapters.length) p.chapters = [{id:uid(), title:"Chapter 1", body:""}];
-    if(!p.currentId || !p.chapters.find(c=>c.id===p.currentId)) p.currentId = p.chapters[0].id;
-    if(!Array.isArray(p.codex)) p.codex = [];
-    if(typeof p.blindMode !== "boolean") p.blindMode = false;
-    if(typeof p.blindDraft !== "string") p.blindDraft = "";
-    if(!p.blindDay) p.blindDay = "";
-    if(!Array.isArray(p.blindSegments)) p.blindSegments = [];
-  });
-  if(!st.projectId || !st.projects.find(p=>p.id===st.projectId)) st.projectId = st.projects[0].id;
-  if(typeof st.invisible !== "boolean") st.invisible = true;
-  if(typeof st.inkManualOff !== "boolean") st.inkManualOff = false;
-  if(typeof st.revealDay !== "string") st.revealDay = "";
-  if(!st.firstDay) st.firstDay = st.day || today();
-  // just-in-time disclosure flags. Generous migration: anyone with real prior
-  // usage keeps every tool they already had — we only start minimal for brand
-  // new saves (and for the retired phase-based scheme).
-  st.seen = Object.assign(freshSeen(), s.seen || {});
-  if(s.seen === undefined){
-    const lc = st.projects.reduce((n,p)=>n + p.chapters.reduce((m,c)=>m+c.body.length,0), 0);
-    const established = lc>0 || st.streak>0 || st.projects.length>1 ||
-      st.projects.some(p=>p.codex.length) || st.projects.some(p=>p.chapters.length>1);
-    if(established) st.seen = {chapters:true, codex:true, projects:true, export:true, sync:true};
-  }
-  if(st.firstDay && st.firstDay !== today() && totalCharsOf(st) > 0) st.seen.sync = true;
-  // drop fields from the retired survival/phase systems and the v1/v2 shape
-  delete st.lives; delete st.dead; delete st.started; delete st.phase; delete st.phaseV;
-  delete st.body; delete st.title; delete st.chapters; delete st.currentId; delete st.codex;
-  return st;
-}
-let S = load();
-function load(){
-  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && (Array.isArray(s.projects) || s.title!==undefined)) return normalize(s); }catch{}
-  return fresh();
-}
-let saveT;
-function save(){ clearTimeout(saveT); saveT = setTimeout(()=>localStorage.setItem(KEY,JSON.stringify(S)),250); schedulePush(); }
-
-/* ---- daily rollover + streak --------------------------------------- */
-function rollover(){
-  if(S.day === today()) return;
-  // archive any blind drafts typed on a previous day
-  S.projects.forEach(p=>{
-    if(p.blindMode && p.blindDraft && p.blindDay !== today()){
-      p.blindSegments.push({day:p.blindDay||S.day, text:p.blindDraft});
-      p.blindDraft = ""; p.blindDay = "";
-      if(p.id === S.projectId) setDraftText("");  // clear live editor
-    }
-  });
-  // new day: today's count resets; lastCount stays at manuscript length so
-  // continuing to type counts as new words, not a fresh dump.
-  S.day = today(); S.todayWords = 0;
-  // coming back on a later day with work already done → cloud sync is worth offering
-  if(totalChars() > 0 && S.firstDay && S.firstDay !== today()) S.seen.sync = true;
-}
-function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
-function creditStreak(){
-  if(S.lastGoalDay === today()) return;            // already counted today
-  if(S.lastGoalDay && dayDiff(S.lastGoalDay,today())===1) S.streak++;  // consecutive
-  else S.streak = 1;                               // first day / gap
-  S.lastGoalDay = today();
-}
-function liveStreak(){
-  // display: a streak only counts if the last goal day was today or yesterday
-  if(!S.lastGoalDay) return 0;
-  const d = dayDiff(S.lastGoalDay, today());
-  return d<=1 ? S.streak : 0;
-}
-
-/* ---- the manuscript (projects → chapters) --------------------------- */
-const draft = $("draft"), mtitle = $("mtitle"), chTitle = $("chTitle");
-const P = () => S.projects.find(p=>p.id===S.projectId) || S.projects[0];
-const cur = () => P().chapters.find(c=>c.id===P().currentId) || P().chapters[0];
-const blindWc = p => (p.blindSegments||[]).reduce((n,s)=>n+wc(s.text),0) + wc(p.blindDraft||"");
-const projWords = p => p.chapters.reduce((n,c)=>n+wc(c.body),0) + blindWc(p);
-mtitle.value = P().name; setDraftText(cur().body); chTitle.value = cur().title;
-S.lastCount = totalChars();
-
-function onWrite(){
-  rollover();
-  if(P().blindMode){ P().blindDraft = getDraftText(); if(!P().blindDay) P().blindDay = today(); }
-  else cur().body = getDraftText();
-  const t = totalChars();
-  if(t > S.lastCount){ S.todayWords += t - S.lastCount; }  // count growth only
-  S.lastCount = t;
-  if(sprint.active) $("runWords").textContent = S.todayWords - sprint.startWords;
-  // sustained flow re-summons invisible ink — unless you turned it off on purpose
-  if(!S.invisible && !S.inkManualOff && flowStart && Date.now()-flowStart >= FLOW_REARM_MS) reArmInk();
-  if(S.todayWords >= S.goal){
-    creditStreak();
-    if(S.revealDay !== today()){                  // the daily payoff, fired once
-      S.revealDay = today(); S.seen.export = true;
-      revealAllInk();
-      const st = liveStreak();
-      toast(`${S.goal} today — the ink is yours.` + (st>1 ? ` 🔥 ${st}-day streak.` : ""));
-    }
-  }
-  renderStats(); renderChapters(); save();
-}
-draft.addEventListener("beforeinput", e=>{
-  // invisible ink = pure forward flow: no deleting, no editing. Turn it off to edit.
-  if(S.invisible && e.inputType.startsWith("delete")) e.preventDefault();
-});
-draft.addEventListener("input", e=>{
-  onFlow();
-  if(S.invisible && e.inputType==="insertText" && e.data) wrapLastChar();
-  onWrite();
-});
-mtitle.addEventListener("input", ()=>{ P().name = mtitle.value; renderProjects(); save(); });
-chTitle.addEventListener("input", ()=>{ cur().title = chTitle.value; renderChapters(); save(); });
-
-/* ---- projects (WIPs) ------------------------------------------------ */
-function renderProjects(){
-  $("prlist").innerHTML = S.projects.map(p=>`<div class="chitem${p.id===S.projectId?' on':''}" data-id="${p.id}">
-    <div class="chmain"><span class="chname">${esc(p.name)||"Untitled WIP"}</span><span class="chwc">${projWords(p)}</span></div>
-    <div class="chctl">
-      <button data-act="blind" style="${p.blindMode?'border-color:var(--accent);color:var(--accent)':''}" title="${p.blindMode?'Exit blind mode':'Blind mode: hide prior sessions while you write'}">Blind</button>
-      <button data-act="del" title="Delete WIP">✕</button>
-    </div></div>`).join("");
-  $("prlist").querySelectorAll(".chitem").forEach(el=>{
-    const id = el.dataset.id;
-    el.querySelector(".chmain").onclick = ()=>switchProject(id);
-    el.querySelectorAll(".chctl button").forEach(b=>b.onclick=ev=>{
-      ev.stopPropagation();
-      if(b.dataset.act==="blind") toggleBlind(id); else delProject(id);
-    });
-  });
-}
-function loadProject(){
-  const p = P(); mtitle.value = p.name;
-  if(p.blindMode){
-    setDraftText(p.blindDraft || ""); chTitle.value = "";
-    $("chTitle").style.display = "none";
-    draft.dataset.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
-  } else {
-    setDraftText(cur().body); chTitle.value = cur().title;
-    $("chTitle").style.display = "";
-    draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
-  }
-  S.lastCount = totalChars();
-  peeking = false; $("bPeek").textContent = "👁 Peek";
-  applyInvisibleUI();
-  renderProjects(); renderChapters(); renderCodex(); renderStats(); save();
-  if(window.innerWidth<=760) $("chapters").classList.remove("open");
-}
-function switchProject(id){
-  if(id === S.projectId) return;
-  if(P().blindMode) P().blindDraft = getDraftText();   // persist outgoing blind draft
-  else cur().body = getDraftText();                     // persist outgoing chapter
-  S.projectId = id;
-  loadProject(); draft.focus();
-}
-function addProject(){
-  const name = prompt("Name your new WIP:", "");
-  if(name === null) return;
-  if(P().blindMode) P().blindDraft = getDraftText();   // don't clobber a chapter with the blind draft
-  else cur().body = getDraftText();
-  const p = freshProject(name.trim());
-  S.projects.push(p); S.projectId = p.id;
-  S.seen.projects = true;                               // a 2nd WIP: the projects rail is now yours
-  loadProject(); draft.focus();
-}
-function delProject(id){
-  if(S.projects.length<=1){ toast("Keep at least one WIP."); return; }
-  const p = S.projects.find(x=>x.id===id);
-  if(!confirm(`Delete "${p.name||'Untitled WIP'}" — ALL its chapters and codex entries?`)) return;
-  S.projects = S.projects.filter(x=>x.id!==id);
-  if(S.projectId===id) S.projectId = S.projects[0].id;
-  loadProject();
-}
-$("prAdd").onclick = addProject;
-function toggleBlind(id){
-  const p = S.projects.find(x=>x.id===id); if(!p) return;
-  p.blindMode = !p.blindMode;
-  if(id === S.projectId){
-    if(p.blindMode){
-      cur().body = getDraftText();                  // stash the open chapter
-      if(!p.blindDay) p.blindDay = today();
-      setDraftText(p.blindDraft || "");
-      $("chTitle").style.display = "none";
-      draft.dataset.placeholder = "Write forward — prior sessions are sealed. Today's words stay.";
-    } else {
-      p.blindDraft = getDraftText();                // stash the blind draft
-      setDraftText(cur().body); chTitle.value = cur().title;
-      $("chTitle").style.display = "";
-      draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
-    }
-    S.lastCount = totalChars();
-    renderChapters(); renderStats();
-    draft.focus();
-  }
-  renderProjects(); save();
-  toast(p.blindMode ? "Blind mode on — prior sessions hidden. Write forward." : "Blind mode off.");
-}
-
-/* ---- invisible ink -------------------------------------------------- */
-const FLOW_PLACEHOLDER = "Just start writing. Each letter fades — the words stay.";
-const FREE_PLACEHOLDER = "Edit freely. Turn Invisible back on whenever you want to fall into flow.";
 let peeking = false;
-function applyInvisibleUI(){
-  $("bInvisible").classList.toggle("primary", S.invisible);
+function applyInkUI(){
+  $("bInk").classList.toggle("primary", S.invisible);
   $("bPeek").style.display = S.invisible ? "" : "none";
-  if(!S.invisible){ peeking = false; $("bPeek").textContent = "👁 Peek"; }
-  if(!P().blindMode) draft.dataset.placeholder = S.invisible ? FLOW_PLACEHOLDER : FREE_PLACEHOLDER;
+  if(!S.invisible){ peeking=false; $("bPeek").textContent="👁 Peek"; }
+  draft.dataset.placeholder = S.invisible
+    ? "Just start writing. Each letter fades — the words stay."
+    : "Edit freely. Turn Invisible back on to return to flow.";
 }
-$("bInvisible").onclick = ()=>{
-  S.invisible = !S.invisible; S.inkManualOff = !S.invisible;   // remember a deliberate choice
-  applyInvisibleUI(); save();
-  toast(S.invisible ? "Invisible ink on — each letter fades after 10 s. Everything stays." : "Invisible ink off — edit freely.");
+
+$("bInk").onclick = ()=>{
+  S.invisible = !S.invisible; S.inkManualOff = !S.invisible;
+  applyInkUI(); save();
+  toast(S.invisible ? "Invisible ink on — each letter fades after 10 s." : "Invisible ink off — edit freely.");
 };
+
 $("bPeek").onclick = ()=>{
   peeking = !peeking;
-  const chars = draft.querySelectorAll(".ink-char");
-  if(peeking){
-    chars.forEach(s=>{ s.style.transition="none"; s.style.opacity="1"; });
-    $("bPeek").textContent = "🙈 Hide";
-  } else {
-    chars.forEach(s=>{
-      const age = Date.now() - (+s.dataset.t||0);
+  draft.querySelectorAll(".ink-char").forEach(s=>{
+    if(peeking){ s.style.transition="none"; s.style.opacity="1"; }
+    else{
+      const age = Date.now()-(+s.dataset.t||0);
       s.style.transition = age>=INK_MS ? "none" : "";
       s.style.opacity = age>=INK_MS ? "0" : "1";
-    });
-    $("bPeek").textContent = "👁 Peek";
-  }
+    }
+  });
+  $("bPeek").textContent = peeking ? "🙈 Hide" : "👁 Peek";
 };
+
 function revealAllInk(){
   draft.querySelectorAll(".ink-char").forEach(s=>{
-    s.style.transition = "opacity 1.2s ease";
-    s.style.opacity = "1";
+    s.style.transition="opacity 1.2s ease"; s.style.opacity="1";
   });
-  S.invisible = false; S.inkManualOff = false;   // revealed, but flow can re-arm it
-  applyInvisibleUI();
-  setTimeout(()=>{ draft.querySelectorAll(".ink-char").forEach(s=>s.style.transition=""); }, 1300);
+  S.invisible=false; S.inkManualOff=false;
+  applyInkUI();
+  setTimeout(()=>draft.querySelectorAll(".ink-char").forEach(s=>s.style.transition=""), 1300);
 }
 function reArmInk(){
-  S.invisible = true; applyInvisibleUI(); save();
+  S.invisible=true; applyInkUI(); save();
   toast("Flowing — invisible ink back on.");
 }
 
-/* ---- flow state + just-in-time disclosure --------------------------- */
-let flowTimer = null, flowStart = 0;
+/* ── flow detection ───────────────────────────────────────── */
+let flowTimer=null, flowStart=0;
 function onFlow(){
-  // entered/continued a typing burst — fade the chrome away
-  if(!flowStart) flowStart = Date.now();
+  if(!flowStart) flowStart=Date.now();
   document.body.classList.add("flowing");
   clearTimeout(flowTimer);
-  flowTimer = setTimeout(()=>{ document.body.classList.remove("flowing"); flowStart = 0; }, 2000);
-}
-function applyDisclosure(){
-  const c = document.body.classList, p = P();
-  c.toggle("has-chapters", S.seen.chapters || p.chapters.length>1);
-  c.toggle("has-codex",    S.seen.codex);
-  c.toggle("has-projects", S.seen.projects || S.projects.length>1);
-  c.toggle("has-export",   S.seen.export);
-  c.toggle("has-sync",     S.seen.sync);
-  c.toggle("revealed",     S.revealDay===today());
-}
-function renderMinCounter(){
-  const el = $("minCounter"); if(el) el.textContent = S.todayWords + " / " + S.goal;
-}
-$("minCounter").onclick = ()=>{
-  const v = prompt("Daily character goal:", S.goal);
-  if(v && +v>0){ S.goal = Math.round(+v); renderStats(); save(); }
-};
-
-/* ---- chapters ------------------------------------------------------- */
-function renderChapters(){
-  if(P().blindMode){
-    const segs = P().blindSegments.length;
-    const chWds = P().chapters.reduce((n,c)=>n+wc(c.body),0);
-    const sealed = [chWds ? `${chWds} chapter word${chWds!==1?'s':''}` : "", segs ? `${segs} prior session${segs>1?'s':''}` : ""].filter(Boolean).join(", ");
-    $("chlist").innerHTML = `<div class="cempty" style="font-size:12px;padding:18px 12px;line-height:1.7">
-      <div style="font-size:22px;margin-bottom:6px">🚫👁</div>
-      <b>Blind mode</b><br>Prior sessions hidden.<br>Write forward.
-      ${sealed ? `<br><br><span style="opacity:.55">${sealed} sealed.</span>` : ""}
-    </div>`;
-    $("chAdd").style.display = "none"; return;
-  }
-  $("chAdd").style.display = "";
-  $("chlist").innerHTML = P().chapters.map((c,i)=>`<div class="chitem${c.id===P().currentId?' on':''}" data-id="${c.id}">
-    <div class="chmain"><span class="chname">${esc(c.title)||"Untitled"}</span><span class="chwc">${wc(c.body)}</span></div>
-    <div class="chctl">
-      <button data-act="up" ${i===0?'disabled':''} title="Move up">↑</button>
-      <button data-act="down" ${i===P().chapters.length-1?'disabled':''} title="Move down">↓</button>
-      <button data-act="del" title="Delete chapter">✕</button>
-    </div></div>`).join("");
-  $("chlist").querySelectorAll(".chitem").forEach(el=>{
-    const id = el.dataset.id;
-    el.querySelector(".chmain").onclick = ()=>switchChapter(id);
-    el.querySelectorAll(".chctl button").forEach(b=>b.onclick=ev=>{
-      ev.stopPropagation();
-      if(b.dataset.act==="up") moveChapter(id,-1);
-      else if(b.dataset.act==="down") moveChapter(id,1);
-      else delChapter(id);
-    });
-  });
-}
-function switchChapter(id){
-  cur().body = getDraftText();              // persist outgoing chapter
-  P().currentId = id;
-  setDraftText(cur().body); chTitle.value = cur().title;   // load incoming (total unchanged)
-  if(window.innerWidth<=760) $("chapters").classList.remove("open");
-  renderChapters(); updateJump(); save(); draft.focus();
-}
-function addChapter(){
-  cur().body = getDraftText();
-  const ch = {id:uid(), title:`Chapter ${P().chapters.length+1}`, body:""};
-  P().chapters.push(ch); P().currentId = ch.id;
-  S.seen.chapters = true;                   // a 2nd chapter: the rail + titles are now yours
-  setDraftText(""); chTitle.value = ch.title;
-  if(window.innerWidth<=760) $("chapters").classList.remove("open");
-  renderChapters(); renderStats(); save(); chTitle.focus();
-}
-function moveChapter(id,dir){
-  const i = P().chapters.findIndex(c=>c.id===id), j = i+dir;
-  if(j<0 || j>=P().chapters.length) return;
-  [P().chapters[i],P().chapters[j]] = [P().chapters[j],P().chapters[i]];
-  renderChapters(); save();
-}
-function delChapter(id){
-  if(P().chapters.length<=1){ toast("Keep at least one chapter."); return; }
-  const c = P().chapters.find(x=>x.id===id);
-  if(!confirm(`Delete "${c.title||'Untitled'}" and its text?`)) return;
-  cur().body = getDraftText();              // persist current edits before removing
-  P().chapters = P().chapters.filter(x=>x.id!==id);
-  if(P().currentId===id) P().currentId = P().chapters[0].id;
-  setDraftText(cur().body); chTitle.value = cur().title;
-  S.lastCount = totalChars();               // total shrank — resync so future typing counts right
-  renderChapters(); renderStats(); save();
-}
-$("chAdd").onclick = addChapter;
-$("bChapters").onclick = ()=>$("chapters").classList.toggle("open");
-
-function renderStats(){
-  $("counts").textContent = `${S.lastCount.toLocaleString()} chars` +
-    (S.todayWords ? ` · ${S.todayWords} today` : "");
-  renderMinCounter();
-  applyDisclosure();
-  updateJump();   // draft may have changed under the caret
+  flowTimer = setTimeout(()=>{
+    document.body.classList.remove("flowing");
+    flowStart=0;
+    offerMood();
+  }, FLOW_PAUSE_MS);
 }
 
-/* daily goal is set by clicking the floating counter (#minCounter) */
-
-/* ---- codex ---------------------------------------------------------- */
-let filter = "All", editing = null;
-function buildTabs(){
-  const tabs = ["All",...TYPES];
-  $("ctabs").innerHTML = tabs.map(t=>`<button class="ctab${t===filter?' on':''}" data-t="${t}">${t}</button>`).join("");
-  $("ctabs").querySelectorAll(".ctab").forEach(b=>b.onclick=()=>{filter=b.dataset.t;buildTabs();renderCodex();});
-  $("eType").innerHTML = TYPES.map(t=>`<option>${t}</option>`).join("");
+/* ── rollover / streak ────────────────────────────────────── */
+function rollover(){
+  if(S.day===today()) return;
+  S.day=today(); S.todayChars=0;
 }
-function renderCodex(){
-  const q = $("csearch").value.toLowerCase();
-  let items = P().codex.filter(e=>filter==="All"||e.type===filter)
-    .filter(e=>!q || (e.name+" "+e.body).toLowerCase().includes(q))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  const list = $("clist");
-  if(!items.length){
-    list.innerHTML = `<div class="cempty">${P().codex.length
-      ? "No entries match."
-      : "Your world starts empty.<br>Add a character, a place, a faction —<br>then glance at it while you write."}</div>`;
-    return;
-  }
-  list.innerHTML = items.map(e=>`<div class="centry" data-id="${e.id}">
-    <div class="ty">${e.type}</div><div class="nm">${esc(e.name)||"Untitled"}</div>
-    ${e.body?`<div class="pv">${esc(e.body)}</div>`:""}</div>`).join("");
-  list.querySelectorAll(".centry").forEach(el=>el.onclick=()=>openEntry(el.dataset.id));
+function dayDiff(a,b){ return Math.round((new Date(b)-new Date(a))/864e5); }
+function creditStreak(){
+  if(S.lastGoalDay===today()) return;
+  S.streak = (S.lastGoalDay&&dayDiff(S.lastGoalDay,today())===1) ? S.streak+1 : 1;
+  S.lastGoalDay=today();
 }
-function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
-
-function openEntry(id, preset){
-  editing = id ? P().codex.find(e=>e.id===id) : {id:uid(), type:(filter!=="All"?filter:"Character"), name:preset||"", body:""};
-  $("eName").value = editing.name; $("eType").value = editing.type; $("eBody").value = editing.body;
-  $("eDel").style.display = id ? "" : "none";
-  $("cListView").style.display="none"; $("cEditView").style.display="flex";
-  $("eName").focus();
+function liveStreak(){
+  if(!S.lastGoalDay) return 0;
+  return dayDiff(S.lastGoalDay,today())<=1 ? S.streak : 0;
 }
-$("eSave").onclick = ()=>{
-  editing.name = $("eName").value.trim(); editing.type = $("eType").value; editing.body = $("eBody").value;
-  if(!editing.name){ toast("Give it a name first."); return; }
-  if(!P().codex.includes(editing)) P().codex.push(editing);
-  S.seen.codex = true; applyDisclosure();   // your first entry: the codex is now permanent
-  save(); backToList(); toast("Saved to codex.");
-};
-$("eDel").onclick = ()=>{ if(confirm("Delete this entry?")){ P().codex = P().codex.filter(e=>e!==editing); save(); backToList(); } };
-$("eBack").onclick = backToList;
-function backToList(){ editing=null; $("cEditView").style.display="none"; $("cListView").style.display="flex"; renderCodex(); updateJump(); }
-$("cNew").onclick = ()=>openEntry(null);
-$("csearch").oninput = renderCodex;
 
-/* add a codex entry pre-filled from the selected manuscript text —
-   or, if the selection IS an entry's name, open that entry (no duplicates) */
-$("bSel").onclick = ()=>{
-  const sel = (window.getSelection()||{}).toString().trim();
-  openCodexPanel();
-  const ex = sel && P().codex.find(e=>e.name.trim().toLowerCase()===sel.toLowerCase());
-  if(ex){ openEntry(ex.id); return; }
-  openEntry(null, sel.slice(0,60));
-  if(!sel) toast("Tip: select a name in your draft first.");
-};
-
-/* ---- codex cross-links ----------------------------------------------
-   When the caret rests on a codex name in the draft, a 📖 chip appears in
-   the editor toolbar — click it to jump to that entry. Longest name wins
-   ("Mara Venn" beats "Mara"); matches are whole-word, case-insensitive. */
-function mentionAt(text, pos){
-  const hay = text.toLowerCase();
-  let best = null, bestLen = 0;
-  for(const e of P().codex){
-    const nm = (e.name||"").trim().toLowerCase();
-    if(nm.length <= bestLen) continue;
-    for(let i = hay.indexOf(nm); i !== -1; i = hay.indexOf(nm, i+1)){
-      if(pos < i) break;                       // occurrences run left→right
-      if(pos > i + nm.length) continue;        // caret past this one
-      if(/\w/.test(hay[i-1]||" ") || /\w/.test(hay[i+nm.length]||" ")) continue; // mid-word
-      best = e; bestLen = nm.length; break;
+/* ── write handler ────────────────────────────────────────── */
+function onWrite(){
+  rollover();
+  const e = todayEntry();
+  e.body = getDraftText();
+  const t = e.body.length;
+  if(t>S.lastCount) S.todayChars += t-S.lastCount;
+  S.lastCount = t;
+  if(!S.invisible&&!S.inkManualOff&&flowStart&&Date.now()-flowStart>=FLOW_REARM_MS) reArmInk();
+  if(S.todayChars>=S.goal){
+    creditStreak();
+    if(S.revealDay!==today()){
+      S.revealDay=today(); S.seen.export=true; S.seen.grow=true;
+      revealAllInk();
+      const st=liveStreak();
+      toast(S.goal+" today — the ink is yours."+(st>1?" "+st+"-day streak.":""));
     }
   }
-  return best;
+  renderCounter(); applyDisclosure(); save();
+  debouncedThemeCheck();
 }
-function updateJump(){
-  const e = mentionAt(getDraftText(), getCaretPos());
-  $("bJump").style.display = e ? "" : "none";
-  if(e){ $("jumpName").textContent = e.name; $("bJump").dataset.id = e.id; }
-}
-function refreshSel(){
-  // selecting text in the draft is the gesture that first reveals the codex
-  const s = window.getSelection();
-  const has = document.activeElement===draft && s && !s.isCollapsed && s.toString().trim().length>0;
-  document.body.classList.toggle("sel", !!has);
-  updateJump();
-}
-draft.addEventListener("click", refreshSel);
-draft.addEventListener("keyup", refreshSel);
-document.addEventListener("selectionchange", ()=>{ if(document.activeElement===draft) refreshSel(); });
-$("bJump").onclick = ()=>{ openCodexPanel(); openEntry($("bJump").dataset.id); };
 
-/* ---- codex panel toggle (mobile) ----------------------------------- */
-function openCodexPanel(){ if(window.innerWidth<=760) $("codex").classList.add("open"); }
-$("bCodex").onclick = ()=>$("codex").classList.toggle("open");
+draft.addEventListener("beforeinput", e=>{
+  if(S.invisible&&e.inputType.startsWith("delete")) e.preventDefault();
+});
+draft.addEventListener("input", e=>{
+  onFlow();
+  if(S.invisible&&e.inputType==="insertText"&&e.data) wrapLastChar(draft);
+  onWrite();
+});
 
-/* ---- sprint --------------------------------------------------------- */
-let sprint = {active:false}, sTimer=null, chosen=15;
-function buildDurs(){
-  $("durs").innerHTML = [10,15,25,45].map(m=>`<button class="dur${m===chosen?' on':''}" data-m="${m}">${m}<small style="display:block;font-size:9px;opacity:.7">min</small></button>`).join("");
-  $("durs").querySelectorAll(".dur").forEach(b=>b.onclick=()=>{chosen=+b.dataset.m;buildDurs();});
+/* ── counter ──────────────────────────────────────────────── */
+function renderCounter(){
+  $("counter").textContent = S.todayChars+" / "+S.goal;
+  document.body.classList.toggle("revealed", S.revealDay===today());
 }
-function renderHist(){
-  const h = S.sprints.slice(-6).reverse();
-  $("ghist").innerHTML = h.length
-    ? "<div style='border:none;color:var(--accent);font-weight:600'>recent sprints</div>"+
-      h.map(s=>`<div><span>${s.date.slice(5)} · ${s.dur}m</span><span>${s.words} chars · ${s.wpm} cpm</span></div>`).join("")
-    : "";
-}
-$("bSprint").onclick = ()=>{ $("sprintSetup").style.display=""; $("sprintRun").style.display="none"; buildDurs(); renderHist(); $("ovSprint").classList.add("on"); };
-$("sStart").onclick = ()=>{
-  rollover();
-  sprint = {active:true, startWords:S.todayWords, end:Date.now()+chosen*60000, dur:chosen};
-  $("sprintSetup").style.display="none"; $("sprintRun").style.display="";
-  $("runTitle").textContent = `${chosen}-minute sprint`; $("runWords").textContent="0";
-  $("ovSprint").classList.remove("on");
-  draft.focus(); tick(); sTimer=setInterval(tick,250);
+$("counter").onclick = ()=>{
+  const v = prompt("Daily character goal:", S.goal);
+  if(v&&+v>0){ S.goal=Math.round(+v); renderCounter(); save(); }
 };
-function tick(){
-  const ms = Math.max(0, sprint.end-Date.now());
-  const m = Math.floor(ms/60000), s = Math.floor(ms%60000/1000);
-  const t = `${m}:${String(s).padStart(2,"0")}`;
-  $("clock").textContent = t;
-  $("bSprint").textContent = `⏱ ${t}`;
-  if(ms<=0) endSprint(true);
+
+/* ── mood ─────────────────────────────────────────────────── */
+let moodDismissT;
+function offerMood(){
+  const e = todayEntry(false);
+  if(!e||e.mood!==null||!e.body) return;
+  $("moodPrompt").classList.add("on");
+  clearTimeout(moodDismissT);
+  moodDismissT = setTimeout(()=>$("moodPrompt").classList.remove("on"), 14000);
 }
-$("sEnd").onclick = ()=>endSprint(false);
-function endSprint(complete){
-  clearInterval(sTimer);
-  $("bSprint").textContent = "⏱ Sprint";
-  const words = Math.max(0, S.todayWords - sprint.startWords);   // characters typed this sprint
-  const wpm = Math.round(words / sprint.dur);                    // characters per minute
-  S.sprints.push({date:today(), dur:sprint.dur, words, wpm});
-  if(S.sprints.length>40) S.sprints = S.sprints.slice(-40);
-  sprint.active=false; save();
-  $("ovSprint").classList.remove("on");
-  toast(complete ? `⏱ Time! ${words} characters at ${wpm} cpm. Beautiful.` : `Sprint ended — ${words} characters. Every one counts.`);
+document.querySelectorAll(".mdot").forEach(d=>{
+  d.onclick = ()=>{
+    const e = todayEntry(false); if(!e) return;
+    e.mood = +d.dataset.m;
+    $("moodPrompt").classList.remove("on");
+    save(); toast("Got it.");
+  };
+});
+
+/* ── disclosure ───────────────────────────────────────────── */
+function applyDisclosure(){
+  const c = document.body.classList;
+  c.toggle("has-grow", !!(S.seen.grow||S.seen.export));
+  c.toggle("revealed", S.revealDay===today());
+  $("bExport").style.display = S.seen.export ? "" : "none";
+  $("bExportG").style.display = S.seen.export ? "" : "none";
+  $("gTabGraph").style.display = S.seen.graph ? "" : "none";
 }
 
-/* ---- theme ---------------------------------------------------------- */
-function applyTheme(t){ document.documentElement.dataset.theme=t; $("bTheme").textContent = t==="night"?"☀":"☾"; localStorage.setItem(THEME_KEY,t); }
-$("bTheme").onclick = ()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
-applyTheme(localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? "night" : "day"));
-
-/* ---- export / backup / restore ------------------------------------- */
-function dl(name, text, mime){
-  const b = new Blob([text],{type:mime}); const u = URL.createObjectURL(b);
-  const a = document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+/* ── views ────────────────────────────────────────────────── */
+let growTab = "timeline";
+function switchView(v){
+  document.body.classList.toggle("grow", v==="grow");
+  if(v==="grow") renderGrow();
+  else draft.focus();
 }
-$("bExport").onclick = ()=>{
-  const what = prompt("Export:  1 = manuscript (.md)   2 = full backup (.json)   3 = restore backup","1");
+$("bGrow").onclick = ()=>switchView("grow");
+$("bFlow").onclick = ()=>switchView("flow");
+
+/* ── grow ─────────────────────────────────────────────────── */
+function renderGrow(){ switchGrowTab(growTab); }
+
+function switchGrowTab(t){
+  growTab = t;
+  document.querySelectorAll(".gtab").forEach(b=>b.classList.toggle("on", b.dataset.tab===t));
+  $("tabTimeline").style.display = t==="timeline" ? "" : "none";
+  $("tabGraph").style.display = t==="graph" ? "flex" : "none";
+  $("tabThemes").style.display = t==="themes" ? "" : "none";
+  if(t==="timeline") renderTimeline();
+  else if(t==="graph") renderGraph();
+  else if(t==="themes") renderThemes();
+}
+
+/* ── timeline ─────────────────────────────────────────────── */
+let viewingId = null;
+
+function renderTimeline(){
+  if(viewingId){ renderEntryView(viewingId); return; }
+  $("entryView").classList.remove("on"); $("entryView").innerHTML="";
+  $("timeline").style.display="";
+  const entries = [...J().entries].sort((a,b)=>b.timestamp-a.timestamp);
+  if(!entries.length){
+    $("timeline").innerHTML="<div class=\"tl-empty\">Your entries will appear here<br>after your first Flow session.</div>";
+    return;
+  }
+  $("timeline").innerHTML = entries.map(e=>{
+    const mc = e.mood ? MOOD_COLORS[e.mood] : null;
+    const style = mc ? "--mood-col:"+mc : "";
+    const preview = esc(e.body.slice(0,220).replace(/\n/g," "));
+    const tags = (e.confirmed_themes||[]).map(tid=>{
+      const th=S.themes.find(t=>t.id===tid);
+      return th?"<span class=\"tl-tag\">"+esc(th.name)+"</span>":"";
+    }).join("");
+    return "<div class=\"tl-entry"+(mc?" has-mood":"")+"\" style=\""+style+"\" data-id=\""+e.id+"\">\n"
+      +"<div class=\"tl-date\">"+fmtDate(e.timestamp)+"</div>\n"
+      +"<div class=\"tl-preview\">"+preview+"</div>\n"
+      +(e.mood&&MOOD_LABELS[e.mood]?"<div style=\"font-size:11px;color:var(--muted);margin-top:4px\">"+MOOD_LABELS[e.mood]+"</div>":"")
+      +(tags?"<div class=\"tl-tags\">"+tags+"</div>":"")
+      +"</div>";
+  }).join("");
+  $("timeline").querySelectorAll(".tl-entry").forEach(el=>{
+    el.onclick = ()=>{ viewingId=el.dataset.id; renderEntryView(el.dataset.id); };
+  });
+}
+
+function renderEntryView(id){
+  const e = J().entries.find(e=>e.id===id); if(!e) return;
+  $("timeline").style.display="none";
+  const ev = $("entryView");
+  ev.classList.add("on");
+  const refsHtml = (e.reflections||[]).map(r=>
+    "<div class=\"ev-reflection\"><div class=\"ev-ref-date\">Reflection · "+fmtDate(r.timestamp)+"</div>"+esc(r.body)+"</div>"
+  ).join("");
+  ev.innerHTML =
+    "<div class=\"ev-nav\"><button class=\"ev-back\" onclick=\"closeEntryView()\">← Back</button>"
+    +"<span class=\"ev-date\">"+fmtDate(e.timestamp)+"</span></div>"
+    +"<div class=\"ev-body\" id=\"evBody\">"+esc(e.body)+"</div>"
+    +refsHtml
+    +"<button class=\"ev-add-ref\" onclick=\"startReflection('"+id+"')\">+ Add a reflection…</button>"
+    +"<div id=\"refArea\"></div>"
+    +"<div class=\"ev-edit-hint\">Hold on text to edit the original — like writing in the margins</div>";
+  const body = ev.querySelector("#evBody");
+  let holdT;
+  const startHold = ()=>{ holdT=setTimeout(()=>unlockEdit(e, body), 1500); };
+  const cancelHold = ()=>clearTimeout(holdT);
+  body.addEventListener("mousedown", startHold);
+  body.addEventListener("touchstart", startHold, {passive:true});
+  ["mouseup","mouseleave","touchend","touchcancel"].forEach(ev=>body.addEventListener(ev,cancelHold));
+}
+
+function unlockEdit(e, bodyEl){
+  if(!confirm(
+    "Paper journals can't be edited — they just accumulate.\n\n"
+    +"Add a reflection below to note what changed, or tap OK to unlock this entry."
+  )) return;
+  bodyEl.contentEditable="true";
+  bodyEl.focus();
+  bodyEl.oninput = ()=>{ e.body=bodyEl.innerText; save(); };
+}
+
+function startReflection(id){
+  $("refArea").innerHTML="<textarea class=\"ref-ta\" id=\"refText\" placeholder=\"How do you feel about this now? What changed?\"></textarea>"
+    +"<div class=\"ref-row\"><button class=\"tbtn primary\" onclick=\"saveReflection('"+id+"')\">Save</button>"
+    +"<button class=\"tbtn\" onclick=\"$('refArea').innerHTML=''\">Cancel</button></div>";
+  $("refText").focus();
+}
+
+function saveReflection(id){
+  const e = J().entries.find(e=>e.id===id); if(!e) return;
+  const text = ($("refText")||{}).value&&$("refText").value.trim();
+  if(!text){ toast("Write something first."); return; }
+  e.reflections.push({id:uid(), timestamp:Date.now(), body:text});
+  save(); renderEntryView(id); toast("Reflection saved.");
+}
+
+function closeEntryView(){
+  viewingId=null;
+  $("entryView").classList.remove("on"); $("entryView").innerHTML="";
+  $("timeline").style.display="";
+  renderTimeline();
+}
+
+/* ── graph ────────────────────────────────────────────────── */
+let gNodes=[], gEdges=[], gVx={}, gVy={}, gAF=null;
+const confirmedThemes = () => S.themes.filter(t=>t.confirmed);
+
+function buildGraphData(q=""){
+  const fl = q.toLowerCase();
+  const themes = confirmedThemes().filter(t=>!fl||t.name.toLowerCase().includes(fl));
+  const themeSet = new Set(themes.map(t=>t.id));
+  const entries = J().entries.filter(e=>(e.confirmed_themes||[]).some(tid=>themeSet.has(tid)));
+  const nodes = [
+    ...themes.map(t=>({id:"t_"+t.id, label:t.name, type:t.type||"theme", r:11})),
+    ...entries.map(e=>({id:"e_"+e.id, label:"", type:"entry", r:5, mood:e.mood}))
+  ];
+  const edges = [];
+  entries.forEach(e=>{
+    (e.confirmed_themes||[]).filter(tid=>themeSet.has(tid)).forEach(tid=>{
+      edges.push({a:"t_"+tid, b:"e_"+e.id});
+    });
+  });
+  return {nodes, edges};
+}
+
+function renderGraph(){
+  const svg = $("graphSvg");
+  const q = ($("graphQ")||{}).value||"";
+  const {nodes, edges} = buildGraphData(q);
+  if(!nodes.length){
+    svg.setAttribute("viewBox","0 0 400 300");
+    svg.innerHTML="<text x=\"50%\" y=\"50%\" text-anchor=\"middle\" font-size=\"15\" fill=\"var(--muted)\" font-family=\"var(--sans)\">Confirm some themes to see the graph.</text>";
+    return;
+  }
+  const W = svg.clientWidth||window.innerWidth;
+  const H = Math.max(300, window.innerHeight-160);
+  svg.style.height=H+"px";
+  nodes.forEach(n=>{
+    const ex=gNodes.find(g=>g.id===n.id);
+    n.x=ex?ex.x:(Math.random()*0.6+0.2)*W;
+    n.y=ex?ex.y:(Math.random()*0.6+0.2)*H;
+    if(gVx[n.id]===undefined){gVx[n.id]=0;gVy[n.id]=0;}
+  });
+  gNodes=nodes; gEdges=edges;
+  if(gAF) cancelAnimationFrame(gAF);
+  let frame=0;
+  const step=()=>{ simulateTick(W,H); drawGraph(W,H); if(++frame<150) gAF=requestAnimationFrame(step); };
+  step();
+}
+
+function simulateTick(W,H){
+  const cx=W/2, cy=H/2;
+  gNodes.forEach(a=>{
+    let fx=(cx-a.x)*0.007, fy=(cy-a.y)*0.007;
+    gNodes.forEach(b=>{
+      if(a.id===b.id) return;
+      const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy+1;
+      fx+=dx*2800/d2; fy+=dy*2800/d2;
+    });
+    gEdges.filter(e=>e.a===a.id||e.b===a.id).forEach(edge=>{
+      const oid=edge.a===a.id?edge.b:edge.a;
+      const o=gNodes.find(n=>n.id===oid); if(!o) return;
+      fx+=(o.x-a.x)*0.035; fy+=(o.y-a.y)*0.035;
+    });
+    gVx[a.id]=(gVx[a.id]+fx)*0.82;
+    gVy[a.id]=(gVy[a.id]+fy)*0.82;
+  });
+  gNodes.forEach(n=>{
+    n.x=Math.max(n.r+4,Math.min(W-n.r-4, n.x+gVx[n.id]));
+    n.y=Math.max(n.r+4,Math.min(H-n.r-4, n.y+gVy[n.id]));
+  });
+}
+
+function drawGraph(W,H){
+  const svg=$("graphSvg");
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  let html="";
+  gEdges.forEach(e=>{
+    const a=gNodes.find(n=>n.id===e.a), b=gNodes.find(n=>n.id===e.b); if(!a||!b) return;
+    html+="<line x1=\""+Math.round(a.x)+"\" y1=\""+Math.round(a.y)+"\" x2=\""+Math.round(b.x)+"\" y2=\""+Math.round(b.y)+"\" stroke=\"var(--line)\" stroke-width=\"1\"/>";
+  });
+  gNodes.forEach(n=>{
+    if(n.type==="entry"){
+      const fill=n.mood?MOOD_COLORS[n.mood]:"var(--muted)";
+      html+="<circle cx=\""+Math.round(n.x)+"\" cy=\""+Math.round(n.y)+"\" r=\""+n.r+"\" fill=\""+fill+"\" opacity=\".65\"/>";
+    } else {
+      html+="<g class=\"gnode\" data-id=\""+n.id+"\" style=\"cursor:pointer\">"
+        +"<circle cx=\""+Math.round(n.x)+"\" cy=\""+Math.round(n.y)+"\" r=\""+n.r+"\" fill=\"var(--accent-soft)\" stroke=\"var(--accent)\" stroke-width=\"1\"/>"
+        +"<text x=\""+Math.round(n.x)+"\" y=\""+Math.round(n.y+n.r+13)+"\" text-anchor=\"middle\" font-size=\"11\" fill=\"var(--muted)\" font-family=\"var(--sans)\">"+esc(n.label)+"</text>"
+        +"</g>";
+    }
+  });
+  svg.innerHTML=html;
+  svg.querySelectorAll(".gnode").forEach(el=>{
+    el.onclick=()=>{
+      const raw=el.dataset.id.replace("t_","");
+      const th=S.themes.find(t=>t.id===raw);
+      if(th&&$("graphQ")){ $("graphQ").value=th.name; renderGraph(); }
+    };
+  });
+}
+
+/* ── themes ───────────────────────────────────────────────── */
+let pendingSuggestions=[];
+let themeCheckT;
+const STOP=new Set("this that with have from they were been your what when will would could should just like more some also very then than there into here about over after other those these much each only time first said make does".split(" "));
+const isStop=w=>STOP.has(w)||w.length<4;
+
+function debouncedThemeCheck(){ clearTimeout(themeCheckT); themeCheckT=setTimeout(runThemeCheck,2000); }
+
+function runThemeCheck(){
+  const allText = allEntriesText().toLowerCase();
+  const words = allText.match(/\b[a-z]{4,}\b/g)||[];
+  const freq={};
+  words.forEach(w=>{ if(!isStop(w)) freq[w]=(freq[w]||0)+1; });
+  const threshold = S.themeSensitivity||3;
+  const confirmed=new Set(S.themes.map(t=>t.name.toLowerCase()));
+  const dismissed=new Set(S.dismissedWords);
+  pendingSuggestions = Object.entries(freq)
+    .filter(([w,c])=>c>=threshold&&!confirmed.has(w)&&!dismissed.has(w))
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,3)
+    .map(([word,count])=>({word,count}));
+  if(pendingSuggestions.length){ S.seen.themes=true; }
+  if(confirmedThemes().length>=1&&J().entries.length>=3) S.seen.graph=true;
+  applyDisclosure();
+}
+
+function renderThemes(){
+  const el=$("themesList");
+  const suggestHtml=pendingSuggestions.map(s=>
+    "<div class=\"th-suggest\"><p>You've written about <strong>"+esc(s.word)+"</strong> "+s.count+" time"+(s.count!==1?"s":"")+" across your entries. Track it as a theme?</p>"
+    +"<div style=\"display:flex;gap:8px\"><button class=\"tbtn primary\" onclick=\"confirmTheme('"+esc(s.word)+"')\">Yes, track it</button>"
+    +"<button class=\"tbtn\" onclick=\"dismissTheme('"+esc(s.word)+"')\">Not for me</button></div></div>"
+  ).join("");
+  const confirmed=confirmedThemes();
+  const thHtml=confirmed.map(t=>{
+    const cnt=J().entries.filter(e=>(e.confirmed_themes||[]).includes(t.id)).length;
+    return "<div class=\"th-card\"><h3>"+esc(t.name)+"</h3><p>"+cnt+" entr"+(cnt!==1?"ies":"y")+" <span class=\"th-chip\">"+esc(t.type||"theme")+"</span></p></div>";
+  }).join("");
+  const empty=!suggestHtml&&!thHtml?"<div class=\"th-empty\">Themes will emerge as you write.<br>After three mentions of any word,<br>you'll be asked if you want to track it.</div>":"";
+  el.innerHTML=suggestHtml+thHtml+empty;
+}
+
+function confirmTheme(word){
+  const id=uid();
+  S.themes.push({id,name:word,type:"theme",confirmed:true});
+  J().entries.forEach(e=>{
+    if(e.body.toLowerCase().includes(word)&&!(e.confirmed_themes||[]).includes(id))
+      (e.confirmed_themes=e.confirmed_themes||[]).push(id);
+  });
+  pendingSuggestions=pendingSuggestions.filter(s=>s.word!==word);
+  if(confirmedThemes().length>=1&&J().entries.length>=3) S.seen.graph=true;
+  save(); renderThemes(); applyDisclosure();
+  toast('"'+word+'" added as a theme.');
+}
+
+function dismissTheme(word){
+  S.dismissedWords.push(word);
+  S.themeSensitivity=Math.min(8,(S.themeSensitivity||3)+0.5);
+  pendingSuggestions=pendingSuggestions.filter(s=>s.word!==word);
+  save(); renderThemes();
+}
+
+/* ── theme toggle ─────────────────────────────────────────── */
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  localStorage.setItem(THEME_KEY,t);
+  [$("bTheme"),$("bThemeG")].forEach(b=>{ if(b) b.textContent=t==="night"?"☀":"☾"; });
+}
+$("bTheme").onclick=()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
+$("bThemeG").onclick=()=>applyTheme(document.documentElement.dataset.theme==="night"?"day":"night");
+
+/* ── export ───────────────────────────────────────────────── */
+function dl(name,text,mime){
+  const b=new Blob([text],{type:mime}),u=URL.createObjectURL(b),a=document.createElement("a");
+  a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+}
+function doExport(){
+  const what=prompt("Export:\n1 = entries (.md)\n2 = full backup (.json)\n3 = restore backup","1");
   if(what==="1"){
-    const p = P();
-    const ms = p.chapters.map(c=>`## ${c.title||"Untitled"}\n\n${c.body}`).join("\n\n");
-    const blindParts = [...(p.blindSegments||[]).map(s=>s.text), p.blindDraft||""].filter(Boolean);
-    const bl = blindParts.length ? "\n\n---\n\n# Blind Drafts\n\n"+blindParts.join("\n\n---\n\n") : "";
-    const cd = p.codex.length ? "\n\n---\n\n# Codex\n\n"+p.codex.map(e=>`## ${e.name} — *${e.type}*\n\n${e.body}`).join("\n\n") : "";
-    dl((p.name||"").replace(/[^\w-]+/g,"_")+".md", `# ${p.name||"Untitled"}\n\n${ms}${bl}${cd}`, "text/markdown");
+    const entries=[...J().entries].sort((a,b)=>a.timestamp-b.timestamp);
+    const md=entries.map(e=>[
+      "## "+fmtDate(e.timestamp),
+      e.body,
+      ...(e.reflections||[]).map(r=>"\n> Reflection · "+fmtDate(r.timestamp)+"\n> "+r.body)
+    ].join("\n\n")).join("\n\n---\n\n");
+    dl("journal-"+today()+".md", md, "text/markdown");
   } else if(what==="2"){
-    dl("writeordie-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
+    dl("invisible-ink-backup-"+today()+".json", JSON.stringify(S,null,2), "application/json");
   } else if(what==="3"){
     $("restoreFile").click();
   }
-};
-$("restoreFile").onchange = e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = ()=>{ try{ S = normalize(JSON.parse(r.result)); localStorage.setItem(KEY,JSON.stringify(S)); location.reload(); }catch{ toast("Couldn't read that backup."); } };
+}
+$("bExport").onclick=doExport;
+$("bExportG").onclick=doExport;
+$("restoreFile").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{ S=normalize(JSON.parse(r.result)); localStorage.setItem(KEY,JSON.stringify(S)); location.reload(); }
+    catch{ toast("Couldn't read that backup."); }
+  };
   r.readAsText(f);
 };
 
-/* ---- toast ---------------------------------------------------------- */
-let toastT;
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
-
-/* ---- cloud sync (Neon, optional) ------------------------------------
-   Accounts via magic-link email (Neon Auth); one row per user in the shared
-   "Apps" Neon project's Data API (PostgREST), guarded by row-level security.
-   Local-first: localStorage stays the live save; the cloud gets a debounced
-   push after edits and a pull on load/sign-in/tab-focus, with timestamp
-   conflict prompts. Leave NEON_DATA_API empty to run fully local. */
-const NEON_DATA_API = "https://ep-lucky-sunset-a67odjzu.apirest.us-west-2.aws.neon.tech/neondb/rest/v1";
-const NEON_AUTH_URL = "https://ep-lucky-sunset-a67odjzu.neonauth.us-west-2.aws.neon.tech/neondb/auth";
-const APP_ID = "invisible-ink";                  // tenant slug in the shared "Apps" project (table app_state)
-const SYNC_KEY = "writeordie.syncedAt";
-let auth = null, sbUser = null, pushT = null, dirty = false;
-function cloudStat(msg, good){ const el=$("cloudStat"); el.textContent=msg; el.style.color = good ? "var(--good)" : "var(--muted)"; }
+/* ── cloud (Supabase) ─────────────────────────────────────── */
+const SB_URL="https://zatrhqutklugogfejulz.supabase.co";
+const SB_KEY="sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";
+const SYNC_KEY="ii.syncedAt";
+let sb=null,sbUser=null,pushT=null,dirty=false;
+function cstat(m,g){ const el=$("cloudStat"); if(el){el.textContent=m;el.style.color=g?"var(--accent)":"var(--muted)";} }
 async function cloudInit(){
-  if(!NEON_DATA_API || !NEON_AUTH_URL) return;
+  if(!SB_URL||!SB_KEY) return;
   try{
-    const { createAuthClient } = await import("https://esm.sh/@neondatabase/neon-js/auth");
-    auth = createAuthClient(NEON_AUTH_URL);
-    await refreshUser();                              // returning from a magic link establishes the session
-    renderCloud();
-    if(sbUser){ S.seen.sync = true; applyDisclosure(); pull(); }
-    window.addEventListener("focus", ()=>{ if(sbUser){ refreshUser(); pull(); } });
-  }catch{}   // CDN / Neon unreachable — run fully local
+    const {createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    sb=createClient(SB_URL,SB_KEY);
+    sb.auth.onAuthStateChange((_ev,sess)=>{
+      sbUser=(sess&&sess.user)||null;
+      renderCloudUI();
+      if(sbUser){ pull(); }
+    });
+    window.addEventListener("focus",()=>{ if(sbUser) pull(); });
+  }catch{}
 }
-async function refreshUser(){
-  try{ const { data } = await auth.getSession(); sbUser = (data && data.user) || null; }
-  catch{ sbUser = null; }
-  return sbUser;
-}
-async function authToken(){                           // JWT for the Data API (RLS reads its `sub` claim)
-  try{ const { data } = await auth.getSession(); return (data && ((data.session && data.session.token) || data.token)) || null; }
-  catch{ return null; }
-}
-async function dapi(path, opts){                      // fetch wrapper for the Neon Data API (PostgREST)
-  opts = opts || {};
-  const token = await authToken();
-  const headers = Object.assign({ "Content-Type":"application/json" }, opts.headers || {});
-  if(token) headers.Authorization = "Bearer " + token;
-  const res = await fetch(NEON_DATA_API.replace(/\/+$/,"") + path, Object.assign({}, opts, { headers }));
-  if(!res.ok) throw new Error("data api " + res.status);
-  return res;
-}
-function schedulePush(){ if(!sbUser) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(push, 3000); }
+function schedulePush(){ if(!sbUser) return; dirty=true; clearTimeout(pushT); pushT=setTimeout(push,3000); }
 async function push(){
   if(!sbUser) return;
   try{
-    cloudStat("syncing…");
-    const rows = await (await dapi(`/app_state?app=eq.${APP_ID}&select=updated_at`)).json();
-    const remote = rows[0] && rows[0].updated_at;
-    const last = localStorage.getItem(SYNC_KEY) || "";
-    if(remote && last && remote > last &&
-       !confirm("A newer copy exists from another device. Overwrite it with this one?")){ pull(); return; }
-    const now = new Date().toISOString();
-    await dapi("/app_state", { method:"POST",
-      headers:{ Prefer:"resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify({ app: APP_ID, user_id: sbUser.id, state: S, updated_at: now }) });
-    localStorage.setItem(SYNC_KEY, now); dirty = false;
-    cloudStat("✓ synced", true);
-  }catch{
-    cloudStat("offline — will retry");
-    clearTimeout(pushT); pushT = setTimeout(push, 15000);
-  }
+    cstat("syncing…");
+    const {data}=await sb.from("journals").select("updated_at").eq("user_id",sbUser.id).maybeSingle();
+    const last=localStorage.getItem(SYNC_KEY)||"";
+    if(data&&last&&data.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
+    const now=new Date().toISOString();
+    const {error}=await sb.from("journals").upsert({user_id:sbUser.id,state:S,updated_at:now});
+    if(error) throw error;
+    localStorage.setItem(SYNC_KEY,now); dirty=false; cstat("✓ synced",true);
+  }catch{ cstat("offline — will retry"); clearTimeout(pushT); pushT=setTimeout(push,15000); }
 }
 async function pull(){
   if(!sbUser) return;
   try{
-    const rows = await (await dapi(`/app_state?app=eq.${APP_ID}&select=state,updated_at`)).json();
-    const data = rows[0];
-    if(!data){ push(); return; }                      // first sign-in on a fresh account: seed the cloud
-    const last = localStorage.getItem(SYNC_KEY) || "";
-    if(data.updated_at <= last){ cloudStat("✓ synced", true); return; }
-    if(dirty && !confirm("A newer copy exists from another device. Load it? (Cancel keeps this device's version.)")){ push(); return; }
-    applyState(data.state);
-    localStorage.setItem(SYNC_KEY, data.updated_at); dirty = false;
-    cloudStat("✓ synced", true);
-  }catch{ cloudStat("offline"); }
+    const {data}=await sb.from("journals").select("state,updated_at").eq("user_id",sbUser.id).maybeSingle();
+    if(!data){ push(); return; }
+    const last=localStorage.getItem(SYNC_KEY)||"";
+    if(data.updated_at<=last){ cstat("✓ synced",true); return; }
+    if(dirty&&!confirm("A newer copy exists from another device. Load it?")){ push(); return; }
+    S=normalize(data.state);
+    localStorage.setItem(SYNC_KEY,data.updated_at); dirty=false; cstat("✓ synced",true);
+    const te=todayEntry(false);
+    setDraftText(te?te.body:""); S.lastCount=te?te.body.length:0;
+    renderCounter(); applyDisclosure();
+  }catch{ cstat("offline"); }
 }
-function applyState(s){
-  S = normalize(s);
-  mtitle.value = P().name;
-  if(P().blindMode){
-    setDraftText(P().blindDraft || ""); chTitle.value = "";
-    $("chTitle").style.display = "none";
-  } else {
-    setDraftText(cur().body); chTitle.value = cur().title;
-    $("chTitle").style.display = "";
-  }
-  S.lastCount = totalChars();
-  rollover(); renderProjects(); renderChapters(); renderCodex(); renderStats(); applyInvisibleUI(); save();
-  clearTimeout(pushT); dirty = false;               // applying remote isn't a local edit — don't echo it back
+function renderCloudUI(){
+  $("cloudOut").style.display=sbUser?"none":"";
+  $("cloudIn").style.display=sbUser?"":"none";
+  if(sbUser) $("cloudWho").textContent=sbUser.email;
 }
-function renderCloud(){
-  $("cloudOut").style.display = sbUser ? "none" : "";
-  $("cloudIn").style.display = sbUser ? "" : "none";
-  if(sbUser) $("cloudWho").textContent = sbUser.email;
-}
-$("bCloud").onclick = ()=>{ renderCloud(); $("ovCloud").classList.add("on"); };
-$("cloudClose").onclick = ()=>$("ovCloud").classList.remove("on");
-$("cloudSend").onclick = async ()=>{
-  const email = $("cloudEmail").value.trim();
+$("bCloud").onclick=()=>{ renderCloudUI(); $("ovCloud").classList.add("on"); };
+$("cloudClose").onclick=()=>$("ovCloud").classList.remove("on");
+$("cloudSend").onclick=async()=>{
+  const email=$("cloudEmail").value.trim();
   if(!email){ toast("Enter your email first."); return; }
-  if(!auth){ toast("Sync is offline right now — try again in a minute."); return; }
-  try{
-    await auth.signIn.magicLink({ email, callbackURL: location.href.split("#")[0] });
-    toast("Check your email for the sign-in link.");
-  }catch{ toast("Couldn't send the link — try again in a minute."); }
+  if(!sb){ toast("Sync is offline — try again in a minute."); return; }
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
+  toast(error?"Couldn't send the link — try again.":"Check your email for the sign-in link.");
 };
-$("cloudOutBtn").onclick = async ()=>{
-  try{ await auth.signOut(); }catch{}
-  sbUser = null; localStorage.removeItem(SYNC_KEY); renderCloud();
-  toast("Signed out — your writing stays on this device.");
-};
+$("cloudOutBtn").onclick=async()=>{ await sb.auth.signOut(); localStorage.removeItem(SYNC_KEY); toast("Signed out — your entries stay on this device."); };
 
-/* ---- boot ----------------------------------------------------------- */
-if(new URLSearchParams(location.search).has("reset")){
-  localStorage.clear(); location.replace(location.pathname); // strip ?reset
+/* ── toast ────────────────────────────────────────────────── */
+let toastT;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2800); }
+
+/* ── tutorial ─────────────────────────────────────────────── */
+let tutStep=0;
+const TUT_IDS=["ts0","ts1","ts2","ts3"];
+
+function tutNext(){
+  const next=tutStep+1;
+  TUT_IDS.forEach((id,i)=>$(id).classList.toggle("on",i===next));
+  tutStep=next;
+  if(tutStep===1) animateTutGraph();
+  if(tutStep===3){ const td=$("tutDraft"); td.focus(); initTutDraft(td); }
 }
-rollover(); buildTabs(); renderCodex(); renderProjects(); renderChapters(); renderStats(); applyInvisibleUI(); applyDisclosure(); save(); cloudInit(); draft.focus();
-// finishing a session (leaving the tab) once there's real text unlocks export
-window.addEventListener("blur", ()=>{ if(totalChars()>0 && !S.seen.export){ S.seen.export = true; applyDisclosure(); save(); } });
-// catch a midnight crossing (or days away) while the tab was left open
-window.addEventListener("focus", ()=>{ rollover(); renderStats(); save(); });
+
+function chooseStorage(choice){
+  S.storageChoice=choice;
+  $("pcLocal").classList.toggle("chosen",choice==="local");
+  $("pcCloud").classList.toggle("chosen",choice==="cloud");
+  $("ts2cont").style.display="";
+}
+
+let tutDraftReady=false;
+function initTutDraft(td){
+  if(tutDraftReady) return;
+  tutDraftReady=true;
+  let typed=0;
+  td.addEventListener("input",e=>{
+    if(e.inputType==="insertText"&&e.data){ wrapLastChar(td); typed+=e.data.length; }
+    if(typed>=10) $("tutBegin").style.display="";
+  });
+}
+
+function finishTutorial(){
+  S.tutorialDone=true; save();
+  $("tut").style.display="none";
+  draft.focus();
+  if(S.storageChoice==="cloud"){ renderCloudUI(); $("ovCloud").classList.add("on"); }
+}
+
+function animateTutInk(){
+  const demo=$("tutWords");
+  const words=["Today","I","feel","a","little","uncertain","and","that's","okay."];
+  demo.innerHTML="";
+  words.forEach((word,i)=>{
+    setTimeout(()=>{
+      const sp=document.createElement("span");
+      sp.textContent=word+" "; demo.appendChild(sp);
+      setTimeout(()=>{ sp.style.opacity="0"; },3200);
+    },i*300);
+  });
+}
+
+function animateTutGraph(){
+  const svg=$("tutGraph");
+  const W=320,H=170;
+  const tn=[{x:80,y:85,r:11,label:"anxiety"},{x:195,y:55,r:11,label:"work"},{x:235,y:125,r:11,label:"sleep"}];
+  const en=[{x:38,y:42,r:5,m:2},{x:130,y:28,r:5,m:4},{x:155,y:105,r:5,m:3},{x:268,y:70,r:5,m:1},{x:185,y:150,r:5,m:3},{x:55,y:138,r:5,m:2}];
+  const edges=[[0,0],[0,2],[0,5],[1,1],[1,3],[2,3],[2,4],[1,4]];
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  let frame=0;
+  const draw=()=>{
+    const showE=Math.min(en.length,Math.floor(frame/3));
+    const showT=Math.min(tn.length,Math.max(0,Math.floor((frame-10)/5)));
+    const showEdge=Math.min(edges.length,Math.max(0,Math.floor((frame-22)/3)));
+    let h="";
+    edges.slice(0,showEdge).forEach(([ti,ei])=>{
+      const t=tn[ti],e=en[ei];if(!t||!e)return;
+      h+="<line x1=\""+t.x+"\" y1=\""+t.y+"\" x2=\""+e.x+"\" y2=\""+e.y+"\" stroke=\"var(--line)\" stroke-width=\"1\"/>";
+    });
+    en.slice(0,showE).forEach(n=>{ h+="<circle cx=\""+n.x+"\" cy=\""+n.y+"\" r=\""+n.r+"\" fill=\""+MOOD_COLORS[n.m]+"\" opacity=\".7\"/>"; });
+    tn.slice(0,showT).forEach(n=>{
+      h+="<circle cx=\""+n.x+"\" cy=\""+n.y+"\" r=\""+n.r+"\" fill=\"var(--accent-soft)\" stroke=\"var(--accent)\" stroke-width=\"1\"/>";
+      h+="<text x=\""+n.x+"\" y=\""+(n.y+n.r+12)+"\" text-anchor=\"middle\" font-size=\"10\" fill=\"var(--muted)\" font-family=\"var(--sans)\">"+n.label+"</text>";
+    });
+    svg.innerHTML=h;
+    if(frame<65) requestAnimationFrame(()=>{frame++;draw();});
+  };
+  draw();
+}
+
+/* ── boot ─────────────────────────────────────────────────── */
+if(new URLSearchParams(location.search).has("reset")){
+  localStorage.clear(); location.replace(location.pathname);
+}
+
+const initEntry = todayEntry(false);
+if(initEntry){ setDraftText(initEntry.body); S.lastCount=initEntry.body.length; }
+
+rollover();
+applyTheme(localStorage.getItem(THEME_KEY)||(window.matchMedia("(prefers-color-scheme: dark)").matches?"night":"day"));
+applyInkUI();
+renderCounter();
+applyDisclosure();
+cloudInit();
+runThemeCheck();
+
+if(!S.tutorialDone){
+  $("tut").style.display="flex";
+  animateTutInk();
+} else {
+  $("tut").style.display="none";
+  draft.focus();
+}
+
+window.addEventListener("blur",()=>{
+  const e=todayEntry(false);
+  if(e&&e.body&&!S.seen.export){ S.seen.export=true; S.seen.grow=true; applyDisclosure(); save(); }
+});
+window.addEventListener("focus",()=>{ rollover(); renderCounter(); save(); });
 </script>
 </body>
 </html>
