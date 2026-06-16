@@ -1,39 +1,58 @@
 # Invisible Ink
 
-A single-file writing studio that hides your words as you write them. Live at
+A single-file journal that hides your words as you write them. Live at
 **[itsinvisible.ink](https://itsinvisible.ink)**.
 
-Type and each letter fades ten seconds later — the text is still there, just
-invisible, so you keep moving forward instead of editing the last sentence to
-death. The whole app is built to protect flow: while you type the page is a
-blank sheet, and tools appear only at the moment you actually reach for them.
+Two modes. **Flow** is for writing: each letter fades ten seconds after you type
+it, so you keep moving forward instead of re-reading and second-guessing the last
+sentence — the words are still there, just invisible. **Grow** is for looking
+back: once you've written, it surfaces the moods, themes, and connections running
+through your entries.
 
 ## What's in it
 
+### Flow — write without looking back
+
 - **Invisible ink** — each letter fades 10 s after you type it; nothing is ever
-  lost. Turn it off to edit freely, *Peek* to reveal the draft on demand, and if
-  you write a sustained burst with ink off it quietly re-arms itself. Hitting the
-  daily goal reveals everything as a reward.
-- **Flow mode** — while invisible ink is on you can only write forward (no
-  deleting, no editing). Turn it off whenever you want to revise.
-- **Flow-first chrome** — while you're typing every panel fades away; pause and
-  the tools fade back in. Nothing competes with the sentence you're writing.
-- **Just-in-time disclosure** — the workspace starts as a blank page and a tool
-  appears only when a real gesture calls for it, then stays (sticky): select
-  text → the codex; add a 2nd chapter → the chapters rail; start a 2nd WIP → the
-  projects rail; finish a session → export; come back another day → cloud sync.
-  Write and nothing else, and the page stays blank forever.
-- **Daily character goal** — a faint floating counter tracks today's characters
-  against your goal (default 500; click it to change). Meeting it builds a streak
-  — encouragement only, no penalties.
-- **Sprints** — timed writing bursts (10/15/25/45 min) with a per-sprint
-  character count and cpm, plus recent-sprint history.
-- **Projects, chapters & codex** — multiple WIPs, each with its own chapters and
-  a searchable worldbuilding codex (characters, locations, factions, lore,
-  timeline). Caret-aware cross-links jump from a name in the draft to its entry.
-- **Blind mode** — seal prior sessions and only see what you write today.
-- **Optional cloud sync** — magic-link sign-in via Supabase; local-first, so it
-  runs fully offline if the cloud is unconfigured or unreachable.
+  lost. *Peek* reveals the draft on demand, and the day's entry is revealed in
+  full the moment you hit your goal.
+- **Forward-only** — while invisible ink is on you can't delete or edit; turn it
+  off whenever you want to revise. Write a sustained burst with it off and it
+  quietly re-arms itself.
+- **Mood check** — a one-tap "how are you?" scale (rough → great) tags the day's
+  entry, so Grow can colour it later.
+- **Daily goal & streak** — a faint counter tracks today's characters against a
+  goal (default 500); meeting it builds a streak. Encouragement only, no penalties.
+- **Flow-first chrome** — while you type the toolbar fades away; pause and it
+  fades back in. Nothing competes with the sentence you're writing.
+
+### Grow — see what you've been thinking about
+
+- **Timeline** — every past entry by date, with its mood and tracked themes. Open
+  one to re-read it.
+- **Reflections** — add a dated reflection to any past entry ("how do you feel
+  about this now?"). The original is left as written; hold on the text to unlock
+  it for an edit, like writing in the margins.
+- **Themes** — words you return to surface automatically (after ~3 mentions
+  across your entries); confirm the ones worth tracking and dismiss the rest.
+  Tracked themes tag every entry that mentions them.
+- **Graph** — a force-directed map of your themes and the entries they connect,
+  filterable by theme or name.
+
+### Across both
+
+- **Just-in-time disclosure** — the workspace starts as a blank page and tools
+  appear only as you reach for them: Grow and export after a first session, the
+  Graph once enough themes and entries pile up. Write and nothing else, and the
+  page stays a blank sheet.
+- **Local-first** — entries live in your browser; no account required and it
+  works fully offline.
+- **Optional cloud sync** — magic-link email sign-in keeps entries across
+  devices, with timestamp-based conflict prompts so a newer copy is never
+  silently overwritten. Leave it unconfigured and the ☁ button stays hidden.
+- **Export** — pull your entries out as Markdown (reflections included), a full
+  JSON backup, or restore from one (↓ button).
+- **Day / night theme** — toggle it, or let it follow the system setting.
 
 ## Run it
 
@@ -43,9 +62,9 @@ It's one static file. Open `index.html` in any browser, or serve the folder:
 python3 -m http.server
 ```
 
-State lives in `localStorage` (keys prefixed `writeordie.*`, the project's
-original name). Append `?reset` to the URL to wipe local state for testing.
-Export a manuscript (`.md`) or a full backup (`.json`) from the ↓ button.
+State lives in `localStorage` (key `ii.journal.v1`; theme under
+`writeordie.theme`, the project's original name). Append `?reset` to the URL to
+wipe local state for testing.
 
 ## Deploy
 
