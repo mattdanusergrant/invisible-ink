@@ -1,10 +1,10 @@
-# Opus — Neon backend (Apps)
+# Many Doors Opus — Neon backend (Apps)
 
-invisible-ink's cloud sync now runs on the shared **Opus** Neon project (Neon Auth +
-Data API), not Supabase. One Neon project backs every app, namespaced by an `app` slug;
-invisible-ink's slug is `invisible-ink`.
+invisible-ink's cloud sync is moving to the shared **Many Doors Opus** Neon project
+(Neon Auth + Data API), off Supabase. One Neon project backs every app, namespaced by
+an `app` slug; invisible-ink's slug is `invisible-ink`.
 
-## Apply (one time, in the Opus project)
+## Apply (one time, in the Many Doors Opus project)
 1. **Auth → Plugins:** enable **Email OTP** (the sign-in method).
 2. **SQL Editor:** run `001_app_state.sql` (creates `app_state` + RLS).
 3. Redeploy the `invisible-ink` repo once the front-end is swapped to Neon.

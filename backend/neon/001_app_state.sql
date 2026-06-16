@@ -1,8 +1,8 @@
--- Opus (Apps) — Neon shared backend.
+-- Many Doors Opus (Apps) — Neon shared backend.
 -- One JSON state blob per user, per app: app_state(app, user_id) -> state.
 -- Auth: Neon Auth (Better Auth, email-OTP). Access: Data API (PostgREST) + RLS.
 -- The current user is auth.user_id() (the JWT `sub` claim, a uuid matching neon_auth.users_sync.id).
--- Run once in the Opus project's SQL Editor.
+-- Run once in the Many Doors Opus project's SQL Editor.
 
 create table if not exists public.app_state (
   app        text  not null,
