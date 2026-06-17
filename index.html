@@ -42,11 +42,12 @@ input,textarea{font-family:inherit}
 
 /* tutorial: fading word demo */
 .tink-demo{
-  font-family:var(--serif);font-size:21px;line-height:2;
-  min-height:64px;margin:20px 0 4px;color:var(--ink);
-  display:flex;flex-wrap:wrap;gap:0 4px;justify-content:center;align-items:center;
+  font-family:var(--serif);font-size:24px;height:60px;line-height:60px;
+  margin:20px 0 4px;color:var(--ink);
+  white-space:pre;overflow:hidden;text-align:right;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 35%);
+          mask-image:linear-gradient(to right,transparent,#000 35%);
 }
-.tink-demo span{transition:opacity 0.9s ease}
 
 /* tutorial: privacy cards */
 .pcards{display:flex;gap:14px;width:100%;margin:18px 0}
@@ -59,10 +60,12 @@ input,textarea{font-family:inherit}
 
 /* tutorial: sandbox draft */
 #tutDraft{
-  width:100%;min-height:72px;border:1px solid var(--line);border-radius:12px;
-  padding:14px 18px;font-family:var(--serif);font-size:19px;line-height:1.75;
+  width:100%;height:60px;border:1px solid var(--line);border-radius:12px;
+  padding:0 18px;font-family:var(--serif);font-size:22px;line-height:60px;
   color:var(--ink);background:var(--bg);outline:none;margin:14px 0;
-  white-space:pre-wrap;word-break:break-word;caret-color:var(--accent);
+  white-space:pre;overflow:hidden;text-align:right;caret-color:var(--accent);
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 30%);
+          mask-image:linear-gradient(to right,transparent,#000 30%);
 }
 #tutDraft:empty::before{content:"Type anything here\2026";color:var(--muted);opacity:.6;pointer-events:none}
 
@@ -95,8 +98,15 @@ header{
 }
 #draft:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.6;pointer-events:none}
 
-/* invisible ink */
-.ink-char{transition:opacity 0.8s ease}
+/* ribbon — invisible-ink flow: one big line, caret centred, words trail left and dissolve */
+body.ribbon{--ribbon-w:50%;--ribbon-size:clamp(26px,4.6vw,46px);--ribbon-top:15vh;--ribbon-fade:40%}
+body.ribbon #draft{
+  flex:none;width:var(--ribbon-w);height:1.6em;margin:var(--ribbon-top) 0 0;padding:0;
+  white-space:pre;overflow:hidden;text-align:right;
+  font-size:var(--ribbon-size);line-height:1.6;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
+          mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
+}
 
 /* floating counter */
 #counter{
@@ -267,7 +277,7 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
   <div class="tscreen on" id="ts0">
     <div class="tink-demo" id="tutWords"></div>
     <h2>Flow</h2>
-    <p>Write without looking back.<br>Each letter fades ten seconds after you type it.<br>The words are always there — just invisible.</p>
+    <p>Write without looking back.<br>The words slide away to the left — only your last few stay in view.<br>They're all still there, just out of sight.</p>
     <button class="tcont" onclick="tutNext()">Continue &#8594;</button>
     <div class="tpdots"><div class="tpdot on"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div></div>
   </div>
@@ -296,7 +306,7 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
   </div>
   <div class="tscreen" id="ts3">
     <h2>Try it</h2>
-    <p>Type anything. Watch it disappear.</p>
+    <p>Type anything. Watch it slide away.</p>
     <div id="tutDraft" contenteditable="true" spellcheck="true"></div>
     <button class="tcont" id="tutBegin" style="display:none" onclick="finishTutorial()">Begin &#8594;</button>
     <div class="tpdots"><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot on"></div></div>
@@ -397,7 +407,6 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
    file, localStorage first. #LLM-generated */
 
 const KEY = "ii.journal.v1", THEME_KEY = "writeordie.theme";
-const INK_MS = 10000;
 const FLOW_REARM_MS = 15000;
 const FLOW_PAUSE_MS = 2000;
 const MOOD_COLORS = ["","#e57373","#ffb74d","#888","#81c784","#4db6ac"];
@@ -493,70 +502,32 @@ function setDraftText(text){
   });
 }
 
-/* ── invisible ink ────────────────────────────────────────── */
-function wrapLastChar(container){
-  const sel = window.getSelection();
-  if(!sel||!sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  const node = range.startContainer, offset = range.startOffset;
-  if(node.nodeType!==Node.TEXT_NODE||!container.contains(node)||offset<1) return;
-  if(offset<node.textContent.length) node.splitText(offset);
-  const charNode = offset>1 ? node.splitText(offset-1) : node;
-  const par = charNode.parentNode;
-  if(par!==container&&par.classList&&par.classList.contains("ink-char"))
-    par.parentNode.insertBefore(charNode, par.nextSibling);
-  const span = document.createElement("span");
-  span.className = "ink-char";
-  span.dataset.t = Date.now().toString();
-  charNode.parentNode.insertBefore(span, charNode);
-  span.appendChild(charNode);
-  const r = document.createRange();
-  r.setStartAfter(span); r.collapse(true);
-  sel.removeAllRanges(); sel.addRange(r);
-  setTimeout(()=>{
-    if(span.isConnected && S.invisible){
-      span.style.transition="opacity 0.8s ease";
-      span.style.opacity="0";
-    }
-  }, INK_MS);
-}
-
+/* ── invisible ink (ribbon) ──────────────────────────────────── */
 let peeking = false;
+function scrollRibbon(){ if(document.body.classList.contains("ribbon")) draft.scrollTop = draft.scrollHeight; }
 function applyInkUI(){
   $("bInk").classList.toggle("primary", S.invisible);
   $("bPeek").style.display = S.invisible ? "" : "none";
-  if(!S.invisible){ peeking=false; $("bPeek").textContent="👁 Peek"; }
+  if(!S.invisible) peeking=false;
+  $("bPeek").textContent = peeking ? "🙈 Hide" : "👁 Peek";
+  document.body.classList.toggle("ribbon", S.invisible && !peeking);
   draft.dataset.placeholder = S.invisible
-    ? "Just start writing. Each letter fades — the words stay."
+    ? "Begin…"
     : "Edit freely. Turn Invisible back on to return to flow.";
+  scrollRibbon();
 }
 
 $("bInk").onclick = ()=>{
   S.invisible = !S.invisible; S.inkManualOff = !S.invisible;
   applyInkUI(); save();
-  toast(S.invisible ? "Invisible ink on — each letter fades after 10 s." : "Invisible ink off — edit freely.");
+  toast(S.invisible ? "Invisible ink on — words slide away as you write." : "Invisible ink off — edit freely.");
 };
 
-$("bPeek").onclick = ()=>{
-  peeking = !peeking;
-  draft.querySelectorAll(".ink-char").forEach(s=>{
-    if(peeking){ s.style.transition="none"; s.style.opacity="1"; }
-    else{
-      const age = Date.now()-(+s.dataset.t||0);
-      s.style.transition = age>=INK_MS ? "none" : "";
-      s.style.opacity = age>=INK_MS ? "0" : "1";
-    }
-  });
-  $("bPeek").textContent = peeking ? "🙈 Hide" : "👁 Peek";
-};
+$("bPeek").onclick = ()=>{ peeking = !peeking; applyInkUI(); };
 
 function revealAllInk(){
-  draft.querySelectorAll(".ink-char").forEach(s=>{
-    s.style.transition="opacity 1.2s ease"; s.style.opacity="1";
-  });
-  S.invisible=false; S.inkManualOff=false;
+  S.invisible=false; S.inkManualOff=false; peeking=false;
   applyInkUI();
-  setTimeout(()=>draft.querySelectorAll(".ink-char").forEach(s=>s.style.transition=""), 1300);
 }
 function reArmInk(){
   S.invisible=true; applyInkUI(); save();
@@ -619,8 +590,8 @@ draft.addEventListener("beforeinput", e=>{
 });
 draft.addEventListener("input", e=>{
   onFlow();
-  if(S.invisible&&e.inputType==="insertText"&&e.data) wrapLastChar(draft);
   onWrite();
+  scrollRibbon();
 });
 
 /* ── counter ──────────────────────────────────────────────── */
@@ -1139,7 +1110,8 @@ function initTutDraft(td){
   tutDraftReady=true;
   let typed=0;
   td.addEventListener("input",e=>{
-    if(e.inputType==="insertText"&&e.data){ wrapLastChar(td); typed+=e.data.length; }
+    if(e.inputType==="insertText"&&e.data) typed+=e.data.length;
+    td.scrollTop=td.scrollHeight;
     if(typed>=10) $("tutBegin").style.display="";
   });
 }
@@ -1154,14 +1126,9 @@ function finishTutorial(){
 function animateTutInk(){
   const demo=$("tutWords");
   const words=["Today","I","feel","a","little","uncertain","and","that's","okay."];
-  demo.innerHTML="";
-  words.forEach((word,i)=>{
-    setTimeout(()=>{
-      const sp=document.createElement("span");
-      sp.textContent=word+" "; demo.appendChild(sp);
-      setTimeout(()=>{ sp.style.opacity="0"; },3200);
-    },i*300);
-  });
+  demo.textContent="";
+  words.forEach((word,i)=>
+    setTimeout(()=>{ demo.textContent += (demo.textContent?" ":"")+word; }, i*380));
 }
 
 function animateTutGraph(){

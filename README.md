@@ -3,19 +3,21 @@
 A single-file journal that hides your words as you write them. Live at
 **[itsinvisible.ink](https://itsinvisible.ink)**.
 
-Two modes. **Flow** is for writing: each letter fades ten seconds after you type
-it, so you keep moving forward instead of re-reading and second-guessing the last
-sentence — the words are still there, just invisible. **Grow** is for looking
-back: once you've written, it surfaces the moods, themes, and connections running
-through your entries.
+Two modes. **Flow** is for writing: the caret stays put and your words slide away
+to the left as you type — only your last few stay in view, so you keep moving
+forward instead of re-reading and second-guessing the last sentence. The words
+are all still there, just out of sight. **Grow** is for looking back: once you've
+written, it surfaces the moods, themes, and connections running through your
+entries.
 
 ## What's in it
 
 ### Flow — write without looking back
 
-- **Invisible ink** — each letter fades 10 s after you type it; nothing is ever
-  lost. *Peek* reveals the draft on demand, and the day's entry is revealed in
-  full the moment you hit your goal.
+- **The ribbon** — one big line with the caret pinned at centre; as you type, the
+  text slides left and dissolves at the edge, so you only ever see your last few
+  words. Nothing is lost. *Peek* reveals the whole draft on demand, and the day's
+  entry opens in full the moment you hit your goal.
 - **Forward-only** — while invisible ink is on you can't delete or edit; turn it
   off whenever you want to revise. Write a sustained burst with it off and it
   quietly re-arms itself.
