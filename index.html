@@ -1028,7 +1028,7 @@ async function push(){
     if(cur&&last&&cur.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
     const now=new Date().toISOString();
     const blob=await encState(S,passphrase);
-    const {error}=await neon.from("app_state").upsert({app:APP_ID,user_id:nUid,state:blob,updated_at:now});
+    const {error}=await neon.from("app_state").upsert({app:APP_ID,state:blob,updated_at:now},{onConflict:"app,user_id"});
     if(error) throw error;
     localStorage.setItem(SYNC_KEY,now); dirty=false; cstat("✓ synced",true);
   }catch(e){ console.error("[sync] push failed",e); cstat("sync error — "+((e&&(e.message||e.code))||"offline")); clearTimeout(pushT); pushT=setTimeout(push,15000); }
