@@ -962,7 +962,7 @@ const NEON_VER="0.6.2-beta";
 const APP_ID="invisible-ink";
 const SYNC_KEY="ii.syncedAt";
 const PASS_KEY="ii.pass";   // passphrase, cached on THIS device only (localStorage is already plaintext)
-let neon=null,nUser=null,nUid=null,pushT=null,dirty=false,passphrase=null;
+let neon=null,nUser=null,pushT=null,dirty=false,passphrase=null;
 function cstat(m,g){ const el=$("cloudStat"); if(el){el.textContent=m;el.style.color=g?"var(--accent)":"var(--muted)";} }
 
 /* End-to-end encryption: the cloud only ever stores an AES-GCM blob keyed by a
@@ -1003,16 +1003,9 @@ async function cloudInit(){
     window.addEventListener("focus",()=>{ if(nUser) pull(); });
   }catch(e){ console.error("[sync] init failed",e); /* cloud is optional — app is local-first */ }
 }
-function jwtSub(t){ try{ return JSON.parse(atob(((t||"").split(".")[1]||"").replace(/-/g,"+").replace(/_/g,"/"))).sub||null; }catch{ return null; } }
 async function refreshSession(){
-  try{
-    const {data}=await neon.auth.getSession();
-    const sess=(data&&(data.session||data))||null;
-    nUser=(sess&&sess.user)||null;
-    const tok=sess&&(sess.access_token||sess.accessToken);
-    nUid=(tok&&jwtSub(tok))||(nUser&&nUser.id)||null;
-    if(nUser) console.log("[sync] signed in — uid(sub)=",nUid," user.id=",nUser&&nUser.id);
-  }catch(e){ console.error("[sync] getSession failed",e); nUser=null; nUid=null; }
+  try{ const {data}=await neon.auth.getSession(); const sess=(data&&(data.session||data))||null; nUser=(sess&&sess.user)||null; }
+  catch(e){ console.error("[sync] getSession failed",e); nUser=null; }
   renderCloudUI();
   if(nUser){ passphrase=localStorage.getItem(PASS_KEY)||null; pull(); }
 }
