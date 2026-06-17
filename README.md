@@ -22,6 +22,9 @@ entries.
   older has already slid out of view, so you can't go back and rewrite it. Turn
   invisible ink off whenever you want the full editor to revise freely; write a
   sustained burst with it off and it quietly re-arms.
+- **Enter clears the screen** — Return poofs the visible line away (your text is
+  kept, with a paragraph break) — a natural "new thought" beat that doubles as an
+  instant privacy wipe if someone glances over your shoulder.
 - **Mood check** — a one-tap "how are you?" scale (rough → great) tags the day's
   entry, so Grow can colour it later.
 - **Daily goal & streak** — a faint counter tracks today's characters against a

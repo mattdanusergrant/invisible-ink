@@ -109,6 +109,10 @@ body.ribbon #draft{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
           mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
 }
+@keyframes ribbonpoof{to{opacity:0;filter:blur(7px);transform:translateY(-10px)}}
+@keyframes ribbonpoofin{from{opacity:0}to{opacity:1}}
+#draft.poof{animation:ribbonpoof .3s ease forwards}
+#draft.poofin{animation:ribbonpoofin .26s ease}
 
 /* floating counter */
 #counter{
@@ -598,6 +602,34 @@ draft.addEventListener("input", e=>{
   onFlow();
   onWrite();
   scrollRibbon();
+});
+
+/* Enter "poofs" the visible line away — a new-thought beat + instant-privacy wipe.
+   The text is kept (a real newline goes in); only the view clears. Ribbon only. */
+let poofing=false;
+function placeCaretEnd(){
+  const r=document.createRange(); r.selectNodeContents(draft); r.collapse(false);
+  const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function poofRibbon(){
+  if(poofing || !draft.textContent.trim()) return;   // nothing to clear
+  poofing=true;
+  draft.classList.add("poof");
+  setTimeout(()=>{
+    draft.focus(); placeCaretEnd();
+    document.execCommand("insertLineBreak");          // keep the newline; input handler saves + scrolls
+    draft.scrollTop=draft.scrollHeight;
+    draft.classList.remove("poof");
+    draft.classList.add("poofin");
+    setTimeout(()=>draft.classList.remove("poofin"), 260);
+    poofing=false;
+  }, 300);
+}
+draft.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && !e.shiftKey && S.invisible && !peeking){
+    e.preventDefault();
+    poofRibbon();
+  }
 });
 
 /* ── counter ──────────────────────────────────────────────── */
