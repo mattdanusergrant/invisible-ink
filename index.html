@@ -588,7 +588,11 @@ function onWrite(){
 }
 
 draft.addEventListener("beforeinput", e=>{
-  if(S.invisible&&e.inputType.startsWith("delete")) e.preventDefault();
+  // forward-flowing: Backspace (and word-back) can fix a fresh typo, but no
+  // forward / line / cut deletes — the slid-away past stays out of reach.
+  if(S.invisible && e.inputType.startsWith("delete")
+     && e.inputType!=="deleteContentBackward" && e.inputType!=="deleteWordBackward")
+    e.preventDefault();
 });
 draft.addEventListener("input", e=>{
   onFlow();

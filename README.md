@@ -18,9 +18,10 @@ entries.
   text slides left and dissolves at the edge, so you only ever see your last few
   words. Nothing is lost. *Peek* reveals the whole draft on demand, and the day's
   entry opens in full the moment you hit your goal.
-- **Forward-only** — while invisible ink is on you can't delete or edit; turn it
-  off whenever you want to revise. Write a sustained burst with it off and it
-  quietly re-arms itself.
+- **Forward-flowing** — Backspace still fixes a typo you just made, but everything
+  older has already slid out of view, so you can't go back and rewrite it. Turn
+  invisible ink off whenever you want the full editor to revise freely; write a
+  sustained burst with it off and it quietly re-arms.
 - **Mood check** — a one-tap "how are you?" scale (rough → great) tags the day's
   entry, so Grow can colour it later.
 - **Daily goal & streak** — a faint counter tracks today's characters against a
