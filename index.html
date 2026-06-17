@@ -362,6 +362,7 @@ body.grow #growView{display:flex}
       <div id="cloudPass" style="display:none;margin:4px 0 10px">
         <p id="cloudPassMsg" style="color:var(--muted);font-size:13px;line-height:1.55;margin:0 0 8px"></p>
         <input class="cinput" id="cloudPassInput" type="password" autocomplete="off" placeholder="passphrase"/>
+        <input class="cinput" id="cloudPassConfirm" type="password" autocomplete="off" placeholder="confirm passphrase" style="display:none"/>
         <button class="tbtn primary" id="cloudPassBtn" style="width:100%;padding:11px">Unlock</button>
       </div>
       <button class="tbtn" id="cloudOutBtn" style="width:100%;padding:11px">Sign out — keep writing locally</button>
@@ -997,6 +998,7 @@ function askPassphrase(mode){
     : "Enter your passphrase to unlock your synced journal on this device.";
   $("cloudPassBtn").textContent=mode==="set"?"Set passphrase":"Unlock";
   $("cloudPassInput").value="";
+  $("cloudPassConfirm").value=""; $("cloudPassConfirm").style.display=mode==="set"?"":"none";
   $("cloudPass").style.display="";
   $("ovCloud").classList.add("on");
   $("cloudPassInput").focus();
@@ -1005,8 +1007,9 @@ function askPassphrase(mode){
 function submitPassphrase(){
   const p=($("cloudPassInput").value||"").trim();
   if(!p){ toast("Enter a passphrase."); return; }
+  if(passMode==="set" && p!==($("cloudPassConfirm").value||"").trim()){ toast("Passphrases don't match — try again."); return; }
   passphrase=p; localStorage.setItem(PASS_KEY,p);
-  $("cloudPass").style.display="none"; $("cloudPassInput").value="";
+  $("cloudPass").style.display="none"; $("cloudPassInput").value=""; $("cloudPassConfirm").value="";
   passMode==="set" ? push() : pull();
 }
 
@@ -1089,6 +1092,7 @@ $("cloudVerify").onclick=async()=>{
 $("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; passMode=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
 $("cloudPassBtn").onclick=submitPassphrase;
 $("cloudPassInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submitPassphrase(); } });
+$("cloudPassConfirm").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submitPassphrase(); } });
 
 /* ── toast ────────────────────────────────────────────────── */
 let toastT;
