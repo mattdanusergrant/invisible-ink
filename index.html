@@ -350,7 +350,11 @@ body.grow #growView{display:flex}
     <div id="cloudOut">
       <p>Your entries are encrypted on this device with a passphrase only you know, before anything is sent. We can't read them — and if you lose the passphrase, neither can we.</p>
       <input class="cinput" id="cloudEmail" type="email" placeholder="you@example.com"/>
-      <button class="tbtn primary" id="cloudSend" style="width:100%;padding:11px">Email me a sign-in link</button>
+      <button class="tbtn primary" id="cloudSend" style="width:100%;padding:11px">Email me a code</button>
+      <div id="cloudCode" style="display:none;margin-top:10px">
+        <input class="cinput" id="cloudOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code"/>
+        <button class="tbtn primary" id="cloudVerify" style="width:100%;padding:11px">Verify code</button>
+      </div>
     </div>
     <div id="cloudIn" style="display:none">
       <p id="cloudWho" style="color:var(--ink)"></p>
@@ -1050,8 +1054,19 @@ $("cloudSend").onclick=async()=>{
   const email=$("cloudEmail").value.trim();
   if(!email){ toast("Enter your email first."); return; }
   if(!neon){ toast("Sync is offline — try again in a minute."); return; }
-  try{ await neon.auth.signInWithOtp({email}); toast("Check your email for the sign-in link."); }
-  catch(e){ console.error("[sync] sign-in failed",e); toast("Sign-in failed: "+((e&&(e.message||e.error_description||e.error))||e||"unknown")); }
+  try{ await neon.auth.signInWithOtp({email}); $("cloudCode").style.display=""; $("cloudOtp").focus(); toast("Check your email for the code."); }
+  catch(e){ console.error("[sync] send-code failed",e); toast("Couldn't send the code: "+((e&&(e.message||e.error_description||e.error))||e||"unknown")); }
+};
+$("cloudVerify").onclick=async()=>{
+  const email=$("cloudEmail").value.trim(), token=$("cloudOtp").value.trim();
+  if(!token){ toast("Enter the code from your email."); return; }
+  if(!neon){ toast("Sync is offline — try again."); return; }
+  try{
+    await neon.auth.verifyOtp({email,token,type:"email"});
+    $("cloudCode").style.display="none"; $("cloudOtp").value="";
+    await refreshSession();
+    toast("Signed in — syncing.");
+  }catch(e){ console.error("[sync] verify failed",e); toast("Verify failed: "+((e&&(e.message||e.error_description||e.error))||e||"unknown")); }
 };
 $("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
 
