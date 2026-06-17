@@ -348,7 +348,7 @@ body.grow #growView{display:flex}
   <div class="card">
     <h2>Sync</h2>
     <div id="cloudOut">
-      <p>Your entries are encrypted on this device before anything is sent. We can't read them.</p>
+      <p>Your entries are encrypted on this device with a passphrase only you know, before anything is sent. We can't read them — and if you lose the passphrase, neither can we.</p>
       <input class="cinput" id="cloudEmail" type="email" placeholder="you@example.com"/>
       <button class="tbtn primary" id="cloudSend" style="width:100%;padding:11px">Email me a sign-in link</button>
     </div>
@@ -951,48 +951,90 @@ $("restoreFile").onchange=e=>{
   r.readAsText(f);
 };
 
-/* ── cloud (Supabase) ─────────────────────────────────────── */
-const SB_URL="https://zatrhqutklugogfejulz.supabase.co";
-const SB_KEY="sb_publishable_EMaQuByhj5n9U2dzsJ3DuQ_ZNcQUPjo";
+/* ── cloud (Neon — "Many Doors Opus": Neon Auth + Data API) ─── */
+const NEON_AUTH_URL="https://ep-lucky-sunset-a67odjzu.neonauth.us-west-2.aws.neon.tech/neondb/auth";
+const NEON_DATA_API="https://ep-lucky-sunset-a67odjzu.apirest.us-west-2.aws.neon.tech/neondb/rest/v1";
+const NEON_VER="0.6.2-beta";
+const APP_ID="invisible-ink";
 const SYNC_KEY="ii.syncedAt";
-let sb=null,sbUser=null,pushT=null,dirty=false;
+const PASS_KEY="ii.pass";   // passphrase, cached on THIS device only (localStorage is already plaintext)
+let neon=null,nUser=null,pushT=null,dirty=false,passphrase=null;
 function cstat(m,g){ const el=$("cloudStat"); if(el){el.textContent=m;el.style.color=g?"var(--accent)":"var(--muted)";} }
-async function cloudInit(){
-  if(!SB_URL||!SB_KEY) return;
-  try{
-    const {createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    sb=createClient(SB_URL,SB_KEY);
-    sb.auth.onAuthStateChange((_ev,sess)=>{
-      sbUser=(sess&&sess.user)||null;
-      renderCloudUI();
-      if(sbUser){ pull(); }
-    });
-    window.addEventListener("focus",()=>{ if(sbUser) pull(); });
-  }catch{}
+
+/* End-to-end encryption: the cloud only ever stores an AES-GCM blob keyed by a
+   passphrase that never leaves this device. Lose it and synced entries are gone. */
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pass,salt){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},
+    base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
-function schedulePush(){ if(!sbUser) return; dirty=true; clearTimeout(pushT); pushT=setTimeout(push,3000); }
+async function encState(obj,pass){
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},await deriveKey(pass,salt),
+    new TextEncoder().encode(JSON.stringify(obj)));
+  return {v:1,salt:b64(salt),iv:b64(iv),ct:b64(ct)};
+}
+async function decState(blob,pass){
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(blob.iv)},
+    await deriveKey(pass,unb64(blob.salt)),unb64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function askPassphrase(mode){
+  const msg=mode==="set"
+    ? "Set a passphrase to encrypt your journal in the cloud.\n\nEntries are encrypted on this device before they're sent — we never see it. If you lose this passphrase, your synced entries can't be recovered, not even by us.\n\nPassphrase:"
+    : "Enter your passphrase to unlock your synced journal on this device:";
+  const p=(prompt(msg)||"").trim();
+  if(!p){ cstat("🔒 sync locked — passphrase needed"); return; }
+  passphrase=p; localStorage.setItem(PASS_KEY,p);
+  mode==="set" ? push() : pull();
+}
+
+async function cloudInit(){
+  try{
+    const base="https://esm.sh/@neondatabase/neon-js@"+NEON_VER;
+    const [{createClient},{BetterAuthVanillaAdapter}]=await Promise.all([
+      import(base), import(base+"/auth/vanilla/adapters")
+    ]);
+    neon=createClient({auth:{adapter:BetterAuthVanillaAdapter(),url:NEON_AUTH_URL},dataApi:{url:NEON_DATA_API}});
+    await refreshSession();
+    window.addEventListener("focus",()=>{ if(nUser) pull(); });
+  }catch{ /* cloud is optional — the app is local-first and runs fully offline */ }
+}
+async function refreshSession(){
+  try{ const {data}=await neon.auth.getSession(); nUser=(data&&data.user)||null; }catch{ nUser=null; }
+  renderCloudUI();
+  if(nUser){ passphrase=localStorage.getItem(PASS_KEY)||null; pull(); }
+}
+function schedulePush(){ if(!nUser) return; dirty=true; clearTimeout(pushT); pushT=setTimeout(push,3000); }
 async function push(){
-  if(!sbUser) return;
+  if(!nUser) return;
+  if(!passphrase){ cstat("🔒 locked — open ☁ to unlock sync"); return; }
   try{
     cstat("syncing…");
-    const {data}=await sb.from("journals").select("updated_at").eq("user_id",sbUser.id).maybeSingle();
+    const {data:cur}=await neon.from("app_state").select("updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
     const last=localStorage.getItem(SYNC_KEY)||"";
-    if(data&&last&&data.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
+    if(cur&&last&&cur.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
     const now=new Date().toISOString();
-    const {error}=await sb.from("journals").upsert({user_id:sbUser.id,state:S,updated_at:now});
+    const blob=await encState(S,passphrase);
+    const {error}=await neon.from("app_state").upsert({app:APP_ID,user_id:nUser.id,state:blob,updated_at:now});
     if(error) throw error;
     localStorage.setItem(SYNC_KEY,now); dirty=false; cstat("✓ synced",true);
   }catch{ cstat("offline — will retry"); clearTimeout(pushT); pushT=setTimeout(push,15000); }
 }
 async function pull(){
-  if(!sbUser) return;
+  if(!nUser) return;
   try{
-    const {data}=await sb.from("journals").select("state,updated_at").eq("user_id",sbUser.id).maybeSingle();
-    if(!data){ push(); return; }
+    const {data}=await neon.from("app_state").select("state,updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    if(!data){ passphrase?push():askPassphrase("set"); return; }
+    if(!passphrase){ askPassphrase("unlock"); return; }
     const last=localStorage.getItem(SYNC_KEY)||"";
     if(data.updated_at<=last){ cstat("✓ synced",true); return; }
     if(dirty&&!confirm("A newer copy exists from another device. Load it?")){ push(); return; }
-    S=normalize(data.state);
+    let obj; try{ obj=await decState(data.state,passphrase); }
+    catch{ passphrase=null; localStorage.removeItem(PASS_KEY); cstat("✗ wrong passphrase"); askPassphrase("unlock"); return; }
+    S=normalize(obj);
     localStorage.setItem(SYNC_KEY,data.updated_at); dirty=false; cstat("✓ synced",true);
     const te=todayEntry(false);
     setDraftText(te?te.body:""); S.lastCount=te?te.body.length:0;
@@ -1000,20 +1042,20 @@ async function pull(){
   }catch{ cstat("offline"); }
 }
 function renderCloudUI(){
-  $("cloudOut").style.display=sbUser?"none":"";
-  $("cloudIn").style.display=sbUser?"":"none";
-  if(sbUser) $("cloudWho").textContent=sbUser.email;
+  $("cloudOut").style.display=nUser?"none":"";
+  $("cloudIn").style.display=nUser?"":"none";
+  if(nUser) $("cloudWho").textContent=nUser.email;
 }
-$("bCloud").onclick=()=>{ renderCloudUI(); $("ovCloud").classList.add("on"); };
+$("bCloud").onclick=()=>{ renderCloudUI(); $("ovCloud").classList.add("on"); if(nUser&&!passphrase) pull(); };
 $("cloudClose").onclick=()=>$("ovCloud").classList.remove("on");
 $("cloudSend").onclick=async()=>{
   const email=$("cloudEmail").value.trim();
   if(!email){ toast("Enter your email first."); return; }
-  if(!sb){ toast("Sync is offline — try again in a minute."); return; }
-  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
-  toast(error?"Couldn't send the link — try again.":"Check your email for the sign-in link.");
+  if(!neon){ toast("Sync is offline — try again in a minute."); return; }
+  try{ await neon.auth.signInWithOtp({email}); toast("Check your email for the sign-in link."); }
+  catch{ toast("Couldn't send the link — try again."); }
 };
-$("cloudOutBtn").onclick=async()=>{ await sb.auth.signOut(); localStorage.removeItem(SYNC_KEY); toast("Signed out — your entries stay on this device."); };
+$("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
 
 /* ── toast ────────────────────────────────────────────────── */
 let toastT;
