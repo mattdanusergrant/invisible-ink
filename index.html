@@ -359,6 +359,11 @@ body.grow #growView{display:flex}
     <div id="cloudIn" style="display:none">
       <p id="cloudWho" style="color:var(--ink)"></p>
       <p id="cloudStat"></p>
+      <div id="cloudPass" style="display:none;margin:4px 0 10px">
+        <p id="cloudPassMsg" style="color:var(--muted);font-size:13px;line-height:1.55;margin:0 0 8px"></p>
+        <input class="cinput" id="cloudPassInput" type="password" autocomplete="off" placeholder="passphrase"/>
+        <button class="tbtn primary" id="cloudPassBtn" style="width:100%;padding:11px">Unlock</button>
+      </div>
       <button class="tbtn" id="cloudOutBtn" style="width:100%;padding:11px">Sign out — keep writing locally</button>
     </div>
     <button class="tbtn" id="cloudClose" style="width:100%;margin-top:10px">Close</button>
@@ -962,7 +967,7 @@ const NEON_VER="0.6.2-beta";
 const APP_ID="invisible-ink";
 const SYNC_KEY="ii.syncedAt";
 const PASS_KEY="ii.pass";   // passphrase, cached on THIS device only (localStorage is already plaintext)
-let neon=null,nUser=null,pushT=null,dirty=false,passphrase=null;
+let neon=null,nUser=null,pushT=null,dirty=false,passphrase=null,passMode=null;
 function cstat(m,g){ const el=$("cloudStat"); if(el){el.textContent=m;el.style.color=g?"var(--accent)":"var(--muted)";} }
 
 /* End-to-end encryption: the cloud only ever stores an AES-GCM blob keyed by a
@@ -986,13 +991,23 @@ async function decState(blob,pass){
   return JSON.parse(new TextDecoder().decode(pt));
 }
 function askPassphrase(mode){
-  const msg=mode==="set"
-    ? "Set a passphrase to encrypt your journal in the cloud.\n\nEntries are encrypted on this device before they're sent — we never see it. If you lose this passphrase, your synced entries can't be recovered, not even by us.\n\nPassphrase:"
-    : "Enter your passphrase to unlock your synced journal on this device:";
-  const p=(prompt(msg)||"").trim();
-  if(!p){ cstat("🔒 sync locked — passphrase needed"); return; }
+  passMode=mode;
+  $("cloudPassMsg").textContent=mode==="set"
+    ? "Set a passphrase to encrypt your journal before it syncs. We never see it — and if you lose it, your synced entries can't be recovered, not even by us."
+    : "Enter your passphrase to unlock your synced journal on this device.";
+  $("cloudPassBtn").textContent=mode==="set"?"Set passphrase":"Unlock";
+  $("cloudPassInput").value="";
+  $("cloudPass").style.display="";
+  $("ovCloud").classList.add("on");
+  $("cloudPassInput").focus();
+  cstat(mode==="set"?"set a passphrase to start syncing":"🔒 locked");
+}
+function submitPassphrase(){
+  const p=($("cloudPassInput").value||"").trim();
+  if(!p){ toast("Enter a passphrase."); return; }
   passphrase=p; localStorage.setItem(PASS_KEY,p);
-  mode==="set" ? push() : pull();
+  $("cloudPass").style.display="none"; $("cloudPassInput").value="";
+  passMode==="set" ? push() : pull();
 }
 
 async function cloudInit(){
@@ -1037,7 +1052,7 @@ async function pull(){
     if(data.updated_at<=last){ cstat("✓ synced",true); return; }
     if(dirty&&!confirm("A newer copy exists from another device. Load it?")){ push(); return; }
     let obj; try{ obj=await decState(data.state,passphrase); }
-    catch{ passphrase=null; localStorage.removeItem(PASS_KEY); cstat("✗ wrong passphrase"); askPassphrase("unlock"); return; }
+    catch{ passphrase=null; localStorage.removeItem(PASS_KEY); askPassphrase("unlock"); $("cloudPassMsg").textContent="That passphrase didn't work — try again."; return; }
     S=normalize(obj);
     localStorage.setItem(SYNC_KEY,data.updated_at); dirty=false; cstat("✓ synced",true);
     const te=todayEntry(false);
@@ -1049,6 +1064,7 @@ function renderCloudUI(){
   $("cloudOut").style.display=nUser?"none":"";
   $("cloudIn").style.display=nUser?"":"none";
   if(nUser) $("cloudWho").textContent=nUser.email;
+  else $("cloudPass").style.display="none";
 }
 $("bCloud").onclick=()=>{ renderCloudUI(); $("ovCloud").classList.add("on"); if(nUser&&!passphrase) pull(); };
 $("cloudClose").onclick=()=>$("ovCloud").classList.remove("on");
@@ -1070,7 +1086,9 @@ $("cloudVerify").onclick=async()=>{
     toast("Signed in — syncing.");
   }catch(e){ console.error("[sync] verify failed",e); toast("Verify failed: "+((e&&(e.message||e.error_description||e.error))||e||"unknown")); }
 };
-$("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
+$("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; passMode=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
+$("cloudPassBtn").onclick=submitPassphrase;
+$("cloudPassInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submitPassphrase(); } });
 
 /* ── toast ────────────────────────────────────────────────── */
 let toastT;
