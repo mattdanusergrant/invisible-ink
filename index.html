@@ -277,7 +277,7 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
   <div class="tscreen on" id="ts0">
     <div class="tink-demo" id="tutWords"></div>
     <h2>Flow</h2>
-    <p>Write without looking back.<br>The words slide away to the left — only your last few stay in view.<br>They're all still there, just out of sight.</p>
+    <p>Your cursor stays put in the centre. As you write, your words drift off to the left and fade from view — so you keep moving forward instead of re-reading and second-guessing the last line.<br>Nothing is deleted. Every word is still there, just out of sight.</p>
     <button class="tcont" onclick="tutNext()">Continue &#8594;</button>
     <div class="tpdots"><div class="tpdot on"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div></div>
   </div>
@@ -306,7 +306,7 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
   </div>
   <div class="tscreen" id="ts3">
     <h2>Try it</h2>
-    <p>Type anything. Watch it slide away.</p>
+    <p>Type a sentence and watch it drift away.<br>It isn't gone — flip Invisible off any time to read it all back.</p>
     <div id="tutDraft" contenteditable="true" spellcheck="true"></div>
     <button class="tcont" id="tutBegin" style="display:none" onclick="finishTutorial()">Begin &#8594;</button>
     <div class="tpdots"><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot"></div><div class="tpdot on"></div></div>
@@ -1125,10 +1125,13 @@ function finishTutorial(){
 
 function animateTutInk(){
   const demo=$("tutWords");
+  if(!demo) return;
   const words=["Today","I","feel","a","little","uncertain","and","that's","okay."];
   demo.textContent="";
   words.forEach((word,i)=>
     setTimeout(()=>{ demo.textContent += (demo.textContent?" ":"")+word; }, i*380));
+  if($("tut").style.display!=="none")
+    setTimeout(animateTutInk, words.length*380+2600);   // loop while the tutorial is open
 }
 
 function animateTutGraph(){
