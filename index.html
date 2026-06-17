@@ -962,7 +962,7 @@ const NEON_VER="0.6.2-beta";
 const APP_ID="invisible-ink";
 const SYNC_KEY="ii.syncedAt";
 const PASS_KEY="ii.pass";   // passphrase, cached on THIS device only (localStorage is already plaintext)
-let neon=null,nUser=null,pushT=null,dirty=false,passphrase=null;
+let neon=null,nUser=null,nUid=null,pushT=null,dirty=false,passphrase=null;
 function cstat(m,g){ const el=$("cloudStat"); if(el){el.textContent=m;el.style.color=g?"var(--accent)":"var(--muted)";} }
 
 /* End-to-end encryption: the cloud only ever stores an AES-GCM blob keyed by a
@@ -1003,9 +1003,16 @@ async function cloudInit(){
     window.addEventListener("focus",()=>{ if(nUser) pull(); });
   }catch(e){ console.error("[sync] init failed",e); /* cloud is optional — app is local-first */ }
 }
+function jwtSub(t){ try{ return JSON.parse(atob(((t||"").split(".")[1]||"").replace(/-/g,"+").replace(/_/g,"/"))).sub||null; }catch{ return null; } }
 async function refreshSession(){
-  try{ const {data}=await neon.auth.getSession(); nUser=(data&&(data.user||(data.session&&data.session.user)))||null; }
-  catch(e){ console.error("[sync] getSession failed",e); nUser=null; }
+  try{
+    const {data}=await neon.auth.getSession();
+    const sess=(data&&(data.session||data))||null;
+    nUser=(sess&&sess.user)||null;
+    const tok=sess&&(sess.access_token||sess.accessToken);
+    nUid=(tok&&jwtSub(tok))||(nUser&&nUser.id)||null;
+    if(nUser) console.log("[sync] signed in — uid(sub)=",nUid," user.id=",nUser&&nUser.id);
+  }catch(e){ console.error("[sync] getSession failed",e); nUser=null; nUid=null; }
   renderCloudUI();
   if(nUser){ passphrase=localStorage.getItem(PASS_KEY)||null; pull(); }
 }
@@ -1015,13 +1022,13 @@ async function push(){
   if(!passphrase){ cstat("🔒 locked — open ☁ to unlock sync"); return; }
   try{
     cstat("syncing…");
-    const {data:cur,error:selErr}=await neon.from("app_state").select("updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    const {data:cur,error:selErr}=await neon.from("app_state").select("updated_at").eq("app",APP_ID).maybeSingle();
     if(selErr) throw selErr;
     const last=localStorage.getItem(SYNC_KEY)||"";
     if(cur&&last&&cur.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
     const now=new Date().toISOString();
     const blob=await encState(S,passphrase);
-    const {error}=await neon.from("app_state").upsert({app:APP_ID,user_id:nUser.id,state:blob,updated_at:now});
+    const {error}=await neon.from("app_state").upsert({app:APP_ID,user_id:nUid,state:blob,updated_at:now});
     if(error) throw error;
     localStorage.setItem(SYNC_KEY,now); dirty=false; cstat("✓ synced",true);
   }catch(e){ console.error("[sync] push failed",e); cstat("sync error — "+((e&&(e.message||e.code))||"offline")); clearTimeout(pushT); pushT=setTimeout(push,15000); }
@@ -1029,7 +1036,7 @@ async function push(){
 async function pull(){
   if(!nUser) return;
   try{
-    const {data,error}=await neon.from("app_state").select("state,updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    const {data,error}=await neon.from("app_state").select("state,updated_at").eq("app",APP_ID).maybeSingle();
     if(error) throw error;
     if(!data){ passphrase?push():askPassphrase("set"); return; }
     if(!passphrase){ askPassphrase("unlock"); return; }
