@@ -327,7 +327,7 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
     </div>
   </header>
   <div id="draft" contenteditable="true" spellcheck="true"
-    data-placeholder="Just start writing. Each letter fades — the words stay."></div>
+    data-placeholder="Begin…"></div>
   <div id="counter">0 / 500</div>
   <div id="moodPrompt">
     <span style="margin-right:2px">how are you?</span>
@@ -1086,15 +1086,26 @@ let toastT;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2800); }
 
 /* ── tutorial ─────────────────────────────────────────────── */
-let tutStep=0;
+let tutStep=0, tutPreview=false;
 const TUT_IDS=["ts0","ts1","ts2","ts3"];
 
+function showTutScreen(i){
+  TUT_IDS.forEach((id,k)=>$(id).classList.toggle("on",k===i));
+  tutStep=i;
+  if(i===0) animateTutInk();
+  if(i===1) animateTutGraph();
+  if(i===3){ const td=$("tutDraft"); td.textContent=""; td.focus(); initTutDraft(td);
+             if(tutPreview) $("tutBegin").style.display=""; }
+}
 function tutNext(){
-  const next=tutStep+1;
-  TUT_IDS.forEach((id,i)=>$(id).classList.toggle("on",i===next));
-  tutStep=next;
-  if(tutStep===1) animateTutGraph();
-  if(tutStep===3){ const td=$("tutDraft"); td.focus(); initTutDraft(td); }
+  let next=tutStep+1;
+  if(tutPreview && next===2) next=3;   // preview skips the storage-setup screen
+  showTutScreen(next);
+}
+function replayTutorial(){
+  tutPreview=true;
+  $("tut").style.display="flex";
+  showTutScreen(0);
 }
 
 function chooseStorage(choice){
@@ -1117,9 +1128,10 @@ function initTutDraft(td){
 }
 
 function finishTutorial(){
-  S.tutorialDone=true; save();
   $("tut").style.display="none";
   draft.focus();
+  if(tutPreview){ tutPreview=false; return; }   // replay: leave storage choice + data untouched
+  S.tutorialDone=true; save();
   if(S.storageChoice==="cloud"){ renderCloudUI(); $("ovCloud").classList.add("on"); }
 }
 
@@ -1178,7 +1190,9 @@ applyDisclosure();
 cloudInit();
 runThemeCheck();
 
-if(!S.tutorialDone){
+if(/[?&]tour\b/.test(location.search)){
+  replayTutorial();            // ?tour — re-view the tutorial anytime, no data touched
+} else if(!S.tutorialDone){
   $("tut").style.display="flex";
   animateTutInk();
 } else {
