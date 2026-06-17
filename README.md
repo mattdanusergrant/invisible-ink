@@ -47,9 +47,12 @@ through your entries.
   page stays a blank sheet.
 - **Local-first** — entries live in your browser; no account required and it
   works fully offline.
-- **Optional cloud sync** — magic-link email sign-in keeps entries across
-  devices, with timestamp-based conflict prompts so a newer copy is never
-  silently overwritten. Leave it unconfigured and the ☁ button stays hidden.
+- **Optional cloud sync — end-to-end encrypted** — sign in with an emailed code,
+  then set a passphrase that never leaves your device. Your journal is encrypted
+  in the browser before it's sent, so the server only ever stores ciphertext —
+  we genuinely can't read it (and if you lose the passphrase, neither can we).
+  Syncs across devices, with timestamp-based conflict prompts so a newer copy is
+  never silently overwritten.
 - **Export** — pull your entries out as Markdown (reflections included), a full
   JSON backup, or restore from one (↓ button).
 - **Day / night theme** — toggle it, or let it follow the system setting.
