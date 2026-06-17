@@ -1015,7 +1015,8 @@ async function push(){
   if(!passphrase){ cstat("🔒 locked — open ☁ to unlock sync"); return; }
   try{
     cstat("syncing…");
-    const {data:cur}=await neon.from("app_state").select("updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    const {data:cur,error:selErr}=await neon.from("app_state").select("updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    if(selErr) throw selErr;
     const last=localStorage.getItem(SYNC_KEY)||"";
     if(cur&&last&&cur.updated_at>last&&!confirm("A newer copy exists from another device. Overwrite it?")){ pull(); return; }
     const now=new Date().toISOString();
@@ -1023,12 +1024,13 @@ async function push(){
     const {error}=await neon.from("app_state").upsert({app:APP_ID,user_id:nUser.id,state:blob,updated_at:now});
     if(error) throw error;
     localStorage.setItem(SYNC_KEY,now); dirty=false; cstat("✓ synced",true);
-  }catch{ cstat("offline — will retry"); clearTimeout(pushT); pushT=setTimeout(push,15000); }
+  }catch(e){ console.error("[sync] push failed",e); cstat("sync error — "+((e&&(e.message||e.code))||"offline")); clearTimeout(pushT); pushT=setTimeout(push,15000); }
 }
 async function pull(){
   if(!nUser) return;
   try{
-    const {data}=await neon.from("app_state").select("state,updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    const {data,error}=await neon.from("app_state").select("state,updated_at").eq("app",APP_ID).eq("user_id",nUser.id).maybeSingle();
+    if(error) throw error;
     if(!data){ passphrase?push():askPassphrase("set"); return; }
     if(!passphrase){ askPassphrase("unlock"); return; }
     const last=localStorage.getItem(SYNC_KEY)||"";
@@ -1041,7 +1043,7 @@ async function pull(){
     const te=todayEntry(false);
     setDraftText(te?te.body:""); S.lastCount=te?te.body.length:0;
     renderCounter(); applyDisclosure();
-  }catch{ cstat("offline"); }
+  }catch(e){ console.error("[sync] pull failed",e); cstat("sync error — "+((e&&(e.message||e.code))||"offline")); }
 }
 function renderCloudUI(){
   $("cloudOut").style.display=nUser?"none":"";
