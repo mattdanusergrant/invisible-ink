@@ -993,17 +993,15 @@ function askPassphrase(mode){
 
 async function cloudInit(){
   try{
-    const base="https://esm.sh/@neondatabase/neon-js@"+NEON_VER;
-    const [{createClient},{BetterAuthVanillaAdapter}]=await Promise.all([
-      import(base), import(base+"/auth/vanilla/adapters")
-    ]);
-    neon=createClient({auth:{adapter:BetterAuthVanillaAdapter(),url:NEON_AUTH_URL},dataApi:{url:NEON_DATA_API}});
+    const {createClient,SupabaseAuthAdapter}=await import("https://esm.sh/@neondatabase/neon-js@"+NEON_VER);
+    neon=createClient({auth:{adapter:SupabaseAuthAdapter(),url:NEON_AUTH_URL},dataApi:{url:NEON_DATA_API}});
     await refreshSession();
     window.addEventListener("focus",()=>{ if(nUser) pull(); });
-  }catch{ /* cloud is optional — the app is local-first and runs fully offline */ }
+  }catch(e){ console.error("[sync] init failed",e); /* cloud is optional — app is local-first */ }
 }
 async function refreshSession(){
-  try{ const {data}=await neon.auth.getSession(); nUser=(data&&data.user)||null; }catch{ nUser=null; }
+  try{ const {data}=await neon.auth.getSession(); nUser=(data&&(data.user||(data.session&&data.session.user)))||null; }
+  catch(e){ console.error("[sync] getSession failed",e); nUser=null; }
   renderCloudUI();
   if(nUser){ passphrase=localStorage.getItem(PASS_KEY)||null; pull(); }
 }
@@ -1053,7 +1051,7 @@ $("cloudSend").onclick=async()=>{
   if(!email){ toast("Enter your email first."); return; }
   if(!neon){ toast("Sync is offline — try again in a minute."); return; }
   try{ await neon.auth.signInWithOtp({email}); toast("Check your email for the sign-in link."); }
-  catch{ toast("Couldn't send the link — try again."); }
+  catch(e){ console.error("[sync] sign-in failed",e); toast("Sign-in failed: "+((e&&(e.message||e.error_description||e.error))||e||"unknown")); }
 };
 $("cloudOutBtn").onclick=async()=>{ try{ await neon.auth.signOut(); }catch{} nUser=null; passphrase=null; localStorage.removeItem(SYNC_KEY); localStorage.removeItem(PASS_KEY); renderCloudUI(); toast("Signed out — your entries stay on this device."); };
 
