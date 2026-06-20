@@ -91,8 +91,9 @@ header{
 .brand small{color:var(--muted);font-weight:400;font-size:10px;display:block;letter-spacing:.04em;text-transform:none}
 .htools{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap}
 
+#ribband{flex:1;display:flex;min-height:0;width:100%}
 #draft{
-  flex:1;width:100%;border:none;background:transparent;color:var(--ink);
+  flex:1;width:100%;min-height:0;border:none;background:transparent;color:var(--ink);
   font-family:var(--serif);font-size:19px;line-height:1.8;
   padding:22px clamp(16px,8vw,100px) 80px;
   outline:none;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
@@ -101,15 +102,23 @@ header{
 #draft:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.6;pointer-events:none}
 
 /* ribbon — invisible-ink flow: one big line, caret centred, words trail left and dissolve */
-body.ribbon{--ribbon-w:50%;--ribbon-size:clamp(26px,4.6vw,46px);--ribbon-top:15vh;--ribbon-fade:40%}
-body.ribbon #draft{
-  flex:none;width:var(--ribbon-w);height:1.6em;margin:var(--ribbon-top) 0 0;padding:0;
-  white-space:pre;overflow:hidden;text-align:right;
-  font-size:var(--ribbon-size);line-height:1.6;
+body.ribbon{--ribbon-size:clamp(26px,4.6vw,46px);--ribbon-x:50%;--ribbon-top:15vh;--ribbon-fade:40%}
+/* The band clips + fades. The editor is sized to its own content and anchored so
+   the caret never moves: its right edge (where you type) is pinned at --ribbon-x,
+   text grows leftward and the band clips/fades it. No internal scroll = no drift.
+   bottom:0 keeps the latest line in view; older lines clip above. */
+body.ribbon #ribband{
+  flex:none;display:block;position:relative;width:100%;
+  height:calc(var(--ribbon-size) * 1.7);margin:var(--ribbon-top) 0 0;overflow:hidden;
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
           mask-image:linear-gradient(to right,transparent,#000 var(--ribbon-fade));
 }
-@keyframes ribbonpoof{to{opacity:0;filter:blur(7px);transform:translateY(-10px)}}
+body.ribbon #draft{
+  position:absolute;right:var(--ribbon-x);bottom:0;width:auto;max-width:none;height:auto;
+  margin:0;padding:0;white-space:pre;text-align:right;overflow:visible;
+  font-size:var(--ribbon-size);line-height:1.6;
+}
+@keyframes ribbonpoof{to{opacity:0;filter:blur(7px);transform:translateY(-6px)}}
 @keyframes ribbonpoofin{from{opacity:0}to{opacity:1}}
 #draft.poof{animation:ribbonpoof .3s ease forwards}
 #draft.poofin{animation:ribbonpoofin .26s ease}
@@ -332,8 +341,8 @@ header,.grow-header{padding-top:max(10px,env(safe-area-inset-top))}
       <button class="tbtn" id="bGrow">Grow &#8594;</button>
     </div>
   </header>
-  <div id="draft" contenteditable="true" spellcheck="true"
-    data-placeholder="Begin…"></div>
+  <div id="ribband"><div id="draft" contenteditable="true" spellcheck="true"
+    data-placeholder="Begin…"></div></div>
   <div id="counter">0 / 500</div>
   <div id="moodPrompt">
     <span style="margin-right:2px">how are you?</span>
@@ -630,6 +639,9 @@ draft.addEventListener("keydown", e=>{
     e.preventDefault();
     poofRibbon();
   }
+});
+$("ribband").addEventListener("click", e=>{   // tap the band → focus the (content-sized) editor
+  if(document.body.classList.contains("ribbon") && e.target!==draft){ draft.focus(); placeCaretEnd(); }
 });
 
 /* ── counter ──────────────────────────────────────────────── */
