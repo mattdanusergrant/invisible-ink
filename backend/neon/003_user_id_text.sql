@@ -1,4 +1,4 @@
--- Definitive RLS fix for app_state (supersedes 002). Run once in Many Doors Opus.
+-- Definitive RLS fix for app_state (supersedes 002). Run once in Invisible Ink.
 --
 -- auth.user_id() returns TEXT, but user_id was uuid — so the "own row" check was
 -- a text-vs-uuid comparison that never matched a client value, and writes failed

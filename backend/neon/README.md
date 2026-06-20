@@ -1,10 +1,11 @@
-# Many Doors Opus — Neon backend (Apps)
+# Invisible Ink — Neon backend
 
-invisible-ink's cloud sync runs on the shared **Many Doors Opus** Neon project
-(Neon Auth + Data API), off Supabase — **live since 2026-06-17**. One Neon project
-backs every app, namespaced by an `app` slug; invisible-ink's slug is `invisible-ink`.
+invisible-ink's cloud sync runs on its own Neon project, **Invisible Ink**
+(Neon Auth + Data API), off Supabase — **live since 2026-06-17**. The `app_state`
+table is keyed by an `app` slug (`invisible-ink`) — a holdover from when this
+backend was briefly shared (formerly the "Many Doors Opus" project, since renamed).
 
-## Apply (in the Many Doors Opus project)
+## Apply (in the Invisible Ink project)
 1. **Auth → Plugins:** enable **Magic Link** (the SDK's `signInWithOtp` sends a
    6-digit email **code** via this flow; the app has a code-entry step).
 2. **SQL Editor:** run `001_app_state.sql` **then** `003_user_id_text.sql`.
@@ -37,9 +38,11 @@ backs every app, namespaced by an `app` slug; invisible-ink's slug is `invisible
 - Use the **`SupabaseAuthAdapter`** (Supabase-shaped calls), not
   `BetterAuthVanillaAdapter` (whose API is `signIn.email()` etc.).
 
-## Add another app
-Pick a slug, point its front-end at this project's Data API + Auth URLs, set `APP_ID`,
-reuse `app_state`. No new Neon project, no new migration.
+## History
+Formerly the shared **"Many Doors Opus"** project (one Neon project for several
+apps). Per the one-app-one-project policy (vault `06_system/backend-platform.md`)
+it's now dedicated to invisible-ink and renamed **Invisible Ink**; the `app` slug in
+`app_state` is a harmless leftover of the shared era.
 
 ## Note on existing data
 invisible-ink is **local-first**, so each device re-seeds its writing to Neon on

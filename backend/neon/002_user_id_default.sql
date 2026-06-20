@@ -1,4 +1,4 @@
--- Fix RLS writes for app_state (run once in the Many Doors Opus project).
+-- Fix RLS writes for app_state (run once in the Invisible Ink project).
 --
 -- auth.user_id() returns TEXT (the JWT `sub`), but app_state.user_id is uuid, so
 -- a client-supplied user_id never matched the "own row" check and every write
